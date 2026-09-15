@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nutun Front-End Engineer — Interview Arena</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    @keyframes pulse-fast {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .urgent-timer {
+      animation: pulse-fast 1s infinite;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans selection:bg-cyan-500 selection:text-black">
+
+  <!-- Top Header Navigation & Status -->
+  <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur px-6 py-4 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-50">
+    <div class="flex items-center space-x-3">
+      <div class="w-8 h-8 rounded bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center font-black text-black text-lg tracking-tighter">
+        N
+      </div>
+      <div>
+        <h1 class="text-sm font-bold tracking-wide uppercase text-slate-200">
+          Nutun Interview Arena <span class="text-xs text-cyan-400 font-normal px-2 py-0.5 rounded border border-cyan-800 bg-cyan-950/40">SIMULATION</span>
+        </h1>
+        <p class="text-xs text-slate-400">Target Role: Front-End Engineer (Nutun RSA / OfferZen)</p>
+      </div>
+    </div>
+
+    <!-- Stats Tracker -->
+    <div class="flex items-center space-x-6 text-xs">
+      <div>
+        <span class="text-slate-400">Competency:</span>
+        <span class="font-semibold text-slate-200 ml-1">Req #1: High-Performance React</span>
+      </div>
+      <div class="h-4 w-px bg-slate-800"></div>
+      <div>
+        <span class="text-slate-400">Total Score:</span>
+        <span id="total-score" class="font-bold text-cyan-400 ml-1">0 / 400 XP</span>
+      </div>
+      <div class="h-4 w-px bg-slate-800"></div>
+      <div>
+        <span class="text-slate-400">Exit Test Status:</span>
+        <span id="exit-badge" class="font-semibold text-amber-400 ml-1">🟡 In Progress</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Arena Body -->
+  <main class="flex-1 max-w-5xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- Left Column: Arena Question & Answering Portal -->
+    <div class="lg:col-span-2 flex flex-col gap-5">
+
+      <!-- Question Card -->
+      <section class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl relative overflow-hidden">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center space-x-2">
+            <span id="question-index-badge" class="px-2.5 py-1 text-xs font-bold rounded-full bg-blue-950 text-blue-400 border border-blue-800">
+              Question 1 of 4
+            </span>
+            <span class="text-xs text-slate-400 uppercase tracking-wider font-semibold">
+              Rapid-Fire Technical Screen
+            </span>
+          </div>
+
+          <!-- Timer Element -->
+          <div id="timer-box" class="flex items-center space-x-2 bg-slate-950 border border-slate-800 px-3 py-1 rounded-lg text-sm font-mono">
+            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <span id="timer-display" class="font-bold text-cyan-400">60s</span>
+          </div>
+        </div>
+
+        <h2 id="question-title" class="text-lg md:text-xl font-semibold text-slate-100 leading-snug mb-3">
+          Loading Question...
+        </h2>
+        
+        <div class="text-xs text-slate-400 bg-slate-950/60 p-3 rounded-lg border border-slate-800/80 mb-2 font-mono flex items-start gap-2">
+          <span class="text-cyan-400 font-bold">Nutun Context:</span>
+          <span id="question-context">...</span>
+        </div>
+      </section>
+
+      <!-- Answer Input Terminal -->
+      <section class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl flex-1 flex flex-col">
+        <div class="flex items-center justify-between mb-3">
+          <label for="answer-input" class="text-xs font-semibold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+            <span>Candidate Verbal Answer (Deliver in 60–90 Seconds)</span>
+          </label>
+          <span id="char-count" class="text-xs text-slate-500 font-mono">0 words</span>
+        </div>
+
+        <div class="relative flex-1">
+          <textarea
+            id="answer-input"
+            rows="7"
+            class="w-full h-full bg-slate-950 border border-slate-800 rounded-lg p-4 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 font-sans leading-relaxed resize-none"
+            placeholder="Type your technical answer here as you would speak it in the interview. Focus on underlying mechanisms, re-render triggers, and real trade-offs..."
+          ></textarea>
+        </div>
+
+        <!-- Controls -->
+        <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center gap-2">
+            <button
+              id="hint-btn"
+              class="text-xs px-3 py-2 rounded-lg border border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white transition flex items-center gap-1.5"
+            >
+              💡 Show Mechanism Hint
+            </button>
+            <button
+              id="reset-timer-btn"
+              class="text-xs px-3 py-2 rounded-lg border border-slate-800 bg-slate-950 text-slate-400 hover:text-slate-200 transition"
+            >
+              Reset Clock
+            </button>
+          </div>
+
+          <button
+            id="submit-btn"
+            class="px-6 py-2.5 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-bold text-sm tracking-wide transition shadow-lg shadow-cyan-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            <span>Submit to Technical Evaluator</span>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Mechanism Hint (Collapsible) -->
+        <div id="hint-panel" class="hidden mt-4 p-3 rounded-lg bg-blue-950/30 border border-blue-900/60 text-xs text-blue-200 leading-relaxed">
+          <strong>Key Mental Model:</strong> <span id="hint-text">...</span>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Right Column: Real-Time Evaluator & Follow-Up Defense -->
+    <div class="flex flex-col gap-5">
+
+      <!-- Evaluator Scoring Card -->
+      <section class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-xl flex flex-col">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+            AI Evaluator Feedback
+          </h3>
+          <span id="evaluation-status-pill" class="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-400">
+            Awaiting Submission
+          </span>
+        </div>
+
+        <!-- Grade Summary -->
+        <div id="evaluation-placeholder" class="py-12 text-center text-slate-500 text-xs leading-relaxed">
+          Submit your answer to receive an instant evaluation, rubric scoring breakdown, precision corrections, and senior follow-up traps.
+        </div>
+
+        <!-- Evaluation Results Container -->
+        <div id="evaluation-results" class="hidden flex flex-col gap-4">
+          
+          <!-- Score Banner -->
+          <div class="flex items-center justify-between p-3 rounded-lg bg-slate-950 border border-slate-800">
+            <div>
+              <div class="text-xs text-slate-400">Question Score</div>
+              <div id="eval-score" class="text-2xl font-black text-cyan-400">85 <span class="text-xs text-slate-500 font-normal">/ 100 XP</span></div>
+            </div>
+            <div id="eval-grade-badge" class="px-3 py-1 rounded text-xs font-bold bg-green-950 text-green-400 border border-green-800">
+              🟢 STRONG DEFENSE
+            </div>
+          </div>
+
+          <!-- Evaluation Rubric Breakdown -->
+          <div class="space-y-2 text-xs">
+            <div>
+              <div class="flex justify-between text-slate-400 mb-1">
+                <span>Technical Accuracy & Mechanism:</span>
+                <span id="rubric-accuracy" class="font-mono text-slate-200">22 / 25</span>
+              </div>
+              <div class="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden">
+                <div id="bar-accuracy" class="bg-cyan-500 h-full rounded-full" style="width: 88%"></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-slate-400 mb-1">
+                <span>Job-Spec Terminology:</span>
+                <span id="rubric-terminology" class="font-mono text-slate-200">18 / 20</span>
+              </div>
+              <div class="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden">
+                <div id="bar-terminology" class="bg-blue-500 h-full rounded-full" style="width: 90%"></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-slate-400 mb-1">
+                <span>Trade-Off & Edge Case Defense:</span>
+                <span id="rubric-tradeoffs" class="font-mono text-slate-200">16 / 20</span>
+              </div>
+              <div class="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden">
+                <div id="bar-tradeoffs" class="bg-indigo-500 h-full rounded-full" style="width: 80%"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Precision Correction Alert -->
+          <div id="eval-correction-card" class="p-3.5 rounded-lg bg-amber-950/40 border border-amber-800 text-xs">
+            <div class="font-bold text-amber-300 mb-1 flex items-center gap-1.5">
+              <span>⚠️ Precision Correction</span>
+            </div>
+            <p id="eval-correction-text" class="text-amber-100/90 leading-relaxed">
+              ...
+            </p>
+          </div>
+
+          <!-- Hostile Follow-Up Trap -->
+          <div id="eval-followup-card" class="p-3.5 rounded-lg bg-red-950/30 border border-red-800 text-xs">
+            <div class="font-bold text-red-300 mb-1 flex items-center gap-1.5">
+              <span>👹 Senior Interviewer Follow-Up:</span>
+            </div>
+            <p id="eval-followup-text" class="text-red-100/90 italic leading-relaxed">
+              ...
+            </p>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex items-center gap-2 pt-2">
+            <button
+              id="retry-btn"
+              class="w-1/2 py-2 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 transition"
+            >
+              🔄 Retry Answer
+            </button>
+            <button
+              id="next-btn"
+              class="w-1/2 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-xs font-bold text-black transition"
+            >
+              Next Question ➔
+            </button>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- Arena Status & Gap Checklist -->
+      <section class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-xl">
+        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
+          Requirement #1 Exit Test Checklist
+        </h4>
+        <ul class="space-y-2 text-xs">
+          <li id="check-1" class="flex items-center gap-2 text-slate-400">
+            <span class="w-4 h-4 rounded-full border border-slate-700 flex items-center justify-center text-[10px]">1</span>
+            <span>Re-Render Triggers & The Props Myth</span>
+          </li>
+          <li id="check-2" class="flex items-center gap-2 text-slate-400">
+            <span class="w-4 h-4 rounded-full border border-slate-700 flex items-center justify-center text-[10px]">2</span>
+            <span>React.memo Failure Modes & References</span>
+          </li>
+          <li id="check-3" class="flex items-center gap-2 text-slate-400">
+            <span class="w-4 h-4 rounded-full border border-slate-700 flex items-center justify-center text-[10px]">3</span>
+            <span>5,000 Debtor Rows & Virtualization</span>
+          </li>
+          <li id="check-4" class="flex items-center gap-2 text-slate-400">
+            <span class="w-4 h-4 rounded-full border border-slate-700 flex items-center justify-center text-[10px]">4</span>
+            <span>Composition (children) vs useMemo</span>
+          </li>
+        </ul>
+      </section>
+
+    </div>
+
+  </main>
+
+  <script>
+    // --- Vertical Slice Data Model (Requirement #1: High-Performance React) ---
+    const QUESTIONS = [
+      {
+        id: "req1-q1",
+        title: "What are the exact conditions that cause a React component to re-render? Does changing props independently trigger a re-render?",
+        context: "10k agents on high-density contact center CRM dashboards. Telephony webhooks and AI token streams fire into parent trees.",
+        hint: "Props do not trigger renders in isolation; a parent component must re-render first, which then passes new values to children.",
+        timeLimit: 60,
+        evaluator: (text) => {
+          const lower = text.toLowerCase();
+          let score = 0;
+          let feedback = [];
+          let hasPropsMyth = lower.includes("props changing independently") || (lower.includes("props change") && !lower.includes("parent"));
+          
+          if (lower.includes("state") || lower.includes("setstate")) score += 25;
+          if (lower.includes("parent")) score += 25;
+          if (lower.includes("context")) score += 20;
+          if (lower.includes("hook")) score += 10;
+          if (lower.includes("object.is") || lower.includes("bailout") || lower.includes("reference")) score += 10;
+
+          let correction = "";
+          if (hasPropsMyth || !lower.includes("parent")) {
+            correction = "Be careful! Props do not independently trigger a component re-render. A parent component re-renders, producing a new React element with updated props. The child component is evaluated as part of that parent render pass unless an optimization boundary (like React.memo) bails out.";
+          } else {
+            correction = "Excellent distinction! You clearly separated a component scheduling a render via internal state from receiving updated props via a parent re-render.";
+          }
+
+          let followUp = "If a parent component re-renders, but passes the exact same primitive numbers and strings to its unmemoized child, does that child still re-render?";
+
+          return {
+            score: Math.min(100, Math.max(30, score)),
+            accuracy: Math.min(25, Math.floor(score * 0.25)),
+            terminology: Math.min(20, Math.floor(score * 0.20)),
+            tradeoffs: Math.min(20, Math.floor(score * 0.20)),
+            correction,
+            followUp,
+            passed: score >= 60
+          };
+        }
+      },
+      {
+        id: "req1-q2",
+        title: "Describe a concrete scenario where wrapping a component in React.memo provides ZERO performance benefit and actually wastes CPU cycles.",
+        context: "Debtor account action buttons ('Settle Balance', 'Propose Arrangement') rendered across 200 list rows.",
+        hint: "Inline object literals or unmemoized callback props break referential equality (shallowEqual returns false on every render).",
+        timeLimit: 60,
+        evaluator: (text) => {
+          const lower = text.toLowerCase();
+          let score = 0;
+
+          if (lower.includes("inline") || lower.includes("reference") || lower.includes("shallow")) score += 30;
+          if (lower.includes("object") || lower.includes("style") || lower.includes("arrow function") || lower.includes("onclick")) score += 30;
+          if (lower.includes("shallowequal") || lower.includes("equality check") || lower.includes("comparison")) score += 20;
+          if (lower.includes("waste") || lower.includes("overhead") || lower.includes("cost")) score += 20;
+
+          let correction = "Precision Rule: React.memo runs a shallow comparison (Object.is) on every prop. If the parent passes an inline object like style={{ padding: 8 }} or an unmemoized arrow function, shallowEqual is always false. You pay the CPU cost of the equality comparison AND still perform the full render!";
+          let followUp = "How do you preserve referential equality for functions passed to React.memo children without creating stale closures?";
+
+          return {
+            score: Math.min(100, Math.max(30, score)),
+            accuracy: Math.min(25, Math.floor(score * 0.25)),
+            terminology: Math.min(20, Math.floor(score * 0.20)),
+            tradeoffs: Math.min(20, Math.floor(score * 0.20)),
+            correction,
+            followUp,
+            passed: score >= 60
+          };
+        }
+      },
+      {
+        id: "req1-q3",
+        title: "An agent dashboard freezes and drops frames when scrolling through 5,000 debtor records. Why does React.memo fail to solve this, and why does DOM Virtualization succeed?",
+        context: "Large financial collection table with 5,000 accounts, status badges, and debt balance inputs.",
+        hint: "The bottleneck is not React diffing; it's host DOM node bloat in the browser layout/paint pipeline. Virtualization keeps visible DOM nodes constant.",
+        timeLimit: 75,
+        evaluator: (text) => {
+          const lower = text.toLowerCase();
+          let score = 0;
+
+          if (lower.includes("dom") || lower.includes("browser") || lower.includes("layout") || lower.includes("paint") || lower.includes("node")) score += 35;
+          if (lower.includes("virtual") || lower.includes("window") || lower.includes("viewport") || lower.includes("slice")) score += 35;
+          if (lower.includes("memo") && (lower.includes("still exist") || lower.includes("cannot remove") || lower.includes("not diffing"))) score += 20;
+          if (lower.includes("o(1)") || lower.includes("constant") || lower.includes("offset")) score += 10;
+
+          let correction = "Never confuse React diffing with browser rendering! 5,000 rows create 50,000+ real DOM elements. The browser layout and paint engine struggles with geometric recalculation on scroll. React.memo leaves all 50,000 nodes in the browser DOM. Virtualization keeps the DOM node count constant (e.g. 25 visible rows).";
+          let followUp = "Does DOM virtualization reduce the total client memory consumption of the 5,000-record dataset to O(1)?";
+
+          return {
+            score: Math.min(100, Math.max(30, score)),
+            accuracy: Math.min(25, Math.floor(score * 0.25)),
+            terminology: Math.min(20, Math.floor(score * 0.20)),
+            tradeoffs: Math.min(20, Math.floor(score * 0.20)),
+            correction,
+            followUp,
+            passed: score >= 60
+          };
+        }
+      },
+      {
+        id: "req1-q4",
+        title: "How can you optimize a heavy component subtree using Component Composition (children) instead of wrapping everything in useMemo or React.memo?",
+        context: "Agent Telephony Call Timer updating every second inside a heavy Customer Account Overview container.",
+        hint: "Passing children down preserves the React Element object reference from the outer scope, allowing React to skip re-evaluating the subtree.",
+        timeLimit: 60,
+        evaluator: (text) => {
+          const lower = text.toLowerCase();
+          let score = 0;
+
+          if (lower.includes("children") || lower.includes("composition")) score += 35;
+          if (lower.includes("reference") || lower.includes("outer") || lower.includes("grandparent") || lower.includes("created outside")) score += 35;
+          if (lower.includes("skip") || lower.includes("bail") || lower.includes("does not re-render")) score += 20;
+          if (lower.includes("element") || lower.includes("object")) score += 10;
+
+          let correction = "Mechanically, when children is instantiated in the parent scope, its React Element object reference remains identical across state updates inside the wrapper. React compares the element reference, sees it has not changed, and skips re-rendering the entire children subtree without any memoization boilerplate!";
+          let followUp = "When does the children composition optimization break? (Hint: what if the parent passes a new prop directly to children?)";
+
+          return {
+            score: Math.min(100, Math.max(30, score)),
+            accuracy: Math.min(25, Math.floor(score * 0.25)),
+            terminology: Math.min(20, Math.floor(score * 0.20)),
+            tradeoffs: Math.min(20, Math.floor(score * 0.20)),
+            correction,
+            followUp,
+            passed: score >= 60
+          };
+        }
+      }
+    ];
+
+    // --- State Management ---
+    let currentIndex = 0;
+    let timerSeconds = 60;
+    let timerInterval = null;
+    let totalScore = 0;
+    let passedQuestions = new Set();
+
+    // DOM Elements
+    const qIndexBadge = document.getElementById("question-index-badge");
+    const qTitle = document.getElementById("question-title");
+    const qContext = document.getElementById("question-context");
+    const timerDisplay = document.getElementById("timer-display");
+    const timerBox = document.getElementById("timer-box");
+    const answerInput = document.getElementById("answer-input");
+    const charCount = document.getElementById("char-count");
+    const hintBtn = document.getElementById("hint-btn");
+    const hintPanel = document.getElementById("hint-panel");
+    const hintText = document.getElementById("hint-text");
+    const resetTimerBtn = document.getElementById("reset-timer-btn");
+    const submitBtn = document.getElementById("submit-btn");
+
+    const evalPlaceholder = document.getElementById("evaluation-placeholder");
+    const evalResults = document.getElementById("evaluation-results");
+    const evalScore = document.getElementById("eval-score");
+    const evalGradeBadge = document.getElementById("eval-grade-badge");
+    const evalStatusPill = document.getElementById("evaluation-status-pill");
+    const rubricAccuracy = document.getElementById("rubric-accuracy");
+    const rubricTerminology = document.getElementById("rubric-terminology");
+    const rubricTradeoffs = document.getElementById("rubric-tradeoffs");
+    const barAccuracy = document.getElementById("bar-accuracy");
+    const barTerminology = document.getElementById("bar-terminology");
+    const barTradeoffs = document.getElementById("bar-tradeoffs");
+    const evalCorrectionText = document.getElementById("eval-correction-text");
+    const evalFollowupText = document.getElementById("eval-followup-text");
+    const retryBtn = document.getElementById("retry-btn");
+    const nextBtn = document.getElementById("next-btn");
+    const totalScoreDisplay = document.getElementById("total-score");
+    const exitBadge = document.getElementById("exit-badge");
+
+    function loadQuestion(index) {
+      clearInterval(timerInterval);
+      const q = QUESTIONS[index];
+      
+      qIndexBadge.textContent = `Question ${index + 1} of ${QUESTIONS.length}`;
+      qTitle.textContent = q.title;
+      qContext.textContent = q.context;
+      hintText.textContent = q.hint;
+      hintPanel.classList.add("hidden");
+
+      answerInput.value = "";
+      charCount.textContent = "0 words";
+      answerInput.disabled = false;
+      submitBtn.disabled = false;
+
+      evalResults.classList.add("hidden");
+      evalPlaceholder.classList.remove("hidden");
+      evalStatusPill.textContent = "Ready for Input";
+      evalStatusPill.className = "text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-400";
+
+      timerSeconds = q.timeLimit;
+      updateTimerDisplay();
+      startTimer();
+    }
+
+    function updateTimerDisplay() {
+      timerDisplay.textContent = `${timerSeconds}s`;
+      if (timerSeconds <= 15) {
+        timerBox.classList.add("border-red-600", "urgent-timer");
+        timerDisplay.classList.add("text-red-400");
+        timerDisplay.classList.remove("text-cyan-400");
+      } else {
+        timerBox.classList.remove("border-red-600", "urgent-timer");
+        timerDisplay.classList.remove("text-red-400");
+        timerDisplay.classList.add("text-cyan-400");
+      }
+    }
+
+    function startTimer() {
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        if (timerSeconds > 0) {
+          timerSeconds--;
+          updateTimerDisplay();
+        } else {
+          clearInterval(timerInterval);
+          timerDisplay.textContent = "TIME EXPIRED";
+          timerBox.classList.add("border-red-600");
+        }
+      }, 1000);
+    }
+
+    // Word Count Tracker
+    answerInput.addEventListener("input", () => {
+      const words = answerInput.value.trim().split(/\s+/).filter(Boolean).length;
+      charCount.textContent = `${words} words`;
+    });
+
+    // Mechanism Hint Toggle
+    hintBtn.addEventListener("click", () => {
+      hintPanel.classList.toggle("hidden");
+    });
+
+    // Reset Timer
+    resetTimerBtn.addEventListener("click", () => {
+      timerSeconds = QUESTIONS[currentIndex].timeLimit;
+      updateTimerDisplay();
+      startTimer();
+    });
+
+    // Evaluate Answer
+    submitBtn.addEventListener("click", () => {
+      const text = answerInput.value.trim();
+      if (!text) {
+        alert("Please write your technical answer before submitting to the evaluator.");
+        return;
+      }
+
+      clearInterval(timerInterval);
+      evalStatusPill.textContent = "Graded";
+      evalStatusPill.className = "text-xs px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800";
+
+      const result = QUESTIONS[currentIndex].evaluator(text);
+
+      evalScore.innerHTML = `${result.score} <span class="text-xs text-slate-500 font-normal">/ 100 XP</span>`;
+      
+      rubricAccuracy.textContent = `${result.accuracy} / 25`;
+      barAccuracy.style.width = `${(result.accuracy / 25) * 100}%`;
+
+      rubricTerminology.textContent = `${result.terminology} / 20`;
+      barTerminology.style.width = `${(result.terminology / 20) * 100}%`;
+
+      rubricTradeoffs.textContent = `${result.tradeoffs} / 20`;
+      barTradeoffs.style.width = `${(result.tradeoffs / 20) * 100}%`;
+
+      evalCorrectionText.textContent = result.correction;
+      evalFollowupText.textContent = `"${result.followUp}"`;
+
+      if (result.passed) {
+        evalGradeBadge.textContent = "🟢 PASS (STRONG DEFENSE)";
+        evalGradeBadge.className = "px-3 py-1 rounded text-xs font-bold bg-green-950 text-green-400 border border-green-800";
+        passedQuestions.add(currentIndex);
+        document.getElementById(`check-${currentIndex + 1}`).classList.add("text-green-400", "font-bold");
+      } else {
+        evalGradeBadge.textContent = "🟡 REVISE PRECISION";
+        evalGradeBadge.className = "px-3 py-1 rounded text-xs font-bold bg-amber-950 text-amber-400 border border-amber-800";
+      }
+
+      totalScore += result.score;
+      totalScoreDisplay.textContent = `${totalScore} / 400 XP`;
+
+      if (passedQuestions.size === QUESTIONS.length) {
+        exitBadge.textContent = "🛡️ INTERVIEW READY";
+        exitBadge.className = "font-bold text-green-400 ml-1";
+      }
+
+      evalPlaceholder.classList.add("hidden");
+      evalResults.classList.remove("hidden");
+    });
+
+    // Retry Button
+    retryBtn.addEventListener("click", () => {
+      evalResults.classList.add("hidden");
+      evalPlaceholder.classList.remove("hidden");
+      evalStatusPill.textContent = "Retrying";
+      evalStatusPill.className = "text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-400";
+      answerInput.focus();
+      startTimer();
+    });
+
+    // Next Question Button
+    nextBtn.addEventListener("click", () => {
+      if (currentIndex < QUESTIONS.length - 1) {
+        currentIndex++;
+        loadQuestion(currentIndex);
+      } else {
+        alert(`Arena Complete! Total XP: ${totalScore}/400. Check the Exit Test status.`);
+      }
+    });
+
+    // Initialize
+    loadQuestion(0);
+  </script>
+</body>
+</html>

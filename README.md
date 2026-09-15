@@ -18,6 +18,11 @@ Comprehensive, evidence-based technical interview preparation curriculum for the
     ├── JOB_ROLE_INTERVIEW_MAP.md
     └── JOB_SPEC_COMPETENCY_MATRIX.md   # Master control document linking every lesson to job requirements
 
+apps/
+└── interview_arena/               # INTERVIEW PREPARATION SIMULATION: Interactive rapid-fire quiz & exit test engine
+    ├── README.md
+    └── index.html
+
 02_FOUNDATIONS/
 ├── 00_TECHNOLOGY_ORIGINS/         # Origins → Problem → Solution → Evolution across web stack
 │   ├── README.md                  # Unified architectural taxonomy (Languages, Markup, CSS, Protocols, APIs, Libraries)
