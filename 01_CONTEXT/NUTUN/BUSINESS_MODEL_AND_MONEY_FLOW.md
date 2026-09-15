@@ -1,6 +1,9 @@
 # How Nutun Makes Money: Business Model, Financial Flows & The Front-End Engineer's Role
 
-> **THE STRATEGIC CONTEXT**: When an engineer walks into a technical interview understanding how the company generates cash, where revenue leaks occur, and how a 200ms latency stall directly damages EBITDA, they immediately stand apart from 99% of candidates who only speak about React hooks.
+> **EVIDENCE CLASSIFICATION & PEDAGOGICAL BOUNDARY**:
+> - `[DOCUMENTED]`: Commercial model (purchased NPL books vs contingency/agency collections & CX BPO), JSE: NUT parentage, 5,290 employees / 5,000+ seat physical infrastructure (scaling to 10,000 agent capacity in marketing disclosures), 18.5M+ monthly interactions, R100M+ Durban Innovation Lab, NCA/POPIA/FCA regulatory regimes.
+> - `[ILLUSTRATIVE ENGINEERING MODEL]`: AHT second-by-second cost conversions, specific agent hourly rates (e.g. R65/hr), telephone vs digital channel cost deltas (R25 vs R0.50), and 45-second conversion windows are industry-standard operational benchmarks used to demonstrate systems-level business impact, not official internal Nutun accounting disclosures.
+> - `[UNKNOWN]`: Exact internal commission splits per portfolio, proprietary debtor pricing formulas, and private margin percentages.
 
 ---
 
@@ -9,12 +12,13 @@
 Nutun (formerly the core operating division of **Transaction Capital Limited**, JSE: NUT) is a global technology-enabled services and digital business process outsourcing (BPO) company.
 
 * **Headquarters**: Johannesburg & Sandton, South Africa (with major global hubs in Durban, Cape Town, UK, Australia, and the US).
-* **Scale**:
-  * **18.5 Million** average monthly customer interactions.
-  * **2.4 Million** distressed consumers managed annually.
-  * **Up to 10,000** concurrent call-centre agents across omnichannel desks.
-  * **R100M+** invested into the Durban Technology & Innovation Lab.
-* **Core Philosophy**: *"People powered by technology"* — building AI, speech analytics, and high-performance agent dashboards that empower human agents to collect revenue, resolve disputes, and rehabilitate consumer credit.
+* **Documented Scale**:
+  * **18.5 Million+** average monthly customer interactions.
+  * **2.4 Million+** distressed consumers managed annually.
+  * **5,290 employees** across **5,000+ seat infrastructure** (engineered to scale to 10,000 agent capacity across omnichannel environments).
+  * **Master Data Universe (MDU)**: proprietary dataset covering **27 million South African credit-active debtors**.
+  * **R100M+** committed to the Durban Technology & Innovation Lab.
+* **Core Philosophy**: *"People powered by technology"* — combining AI, speech analytics, and high-performance agent dashboards that empower human agents to collect revenue, resolve disputes, and rehabilitate consumer credit.
 
 ---
 
