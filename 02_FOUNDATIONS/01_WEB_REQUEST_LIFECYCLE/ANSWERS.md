@@ -29,3 +29,74 @@ If a front-end engineer doesn't understand the rendering pipeline and the event 
 3. For streaming AI features (like Zoey or real-time call copilots), incoming token streams that trigger heavy layout reflows or synchronous parsing will cause severe UI jank.
 
 An engineer who understands this ensures that expensive work is offloaded (e.g. using Web Workers as in my `science-of-our-world` project), animations use composite-only properties (`transform`, `opacity`), and the main thread stays free to maintain immediate sub-second UI responsiveness.
+
+---
+
+## Stage 2 AI Tutor Checkpoint: Sequence Validation
+
+### Candidate Answer
+> *"Before an HTTP request reaches the application server, the client first parses the URL and determines the destination, including the scheme, host and port.
+> 
+> Then the hostname has to be resolved to an IP address, typically through DNS, unless the result is already available from a relevant cache.
+> 
+> Once the destination is known, the client establishes the required network connection. For a traditional HTTPS connection this involves TCP, including the TCP handshake. With HTTP/3, the transport is QUIC over UDP instead.
+> 
+> For HTTPS, the client then performs the TLS handshake to establish encryption and authenticate the server. With TLS 1.3, this is generally one round trip for a new connection, although connection resumption can reduce the handshake cost.
+> 
+> After the connection and security negotiation are established, the browser constructs and sends the HTTP request to the server.
+> 
+> The request then travels through whatever network infrastructure is in front of the application, such as a load balancer or reverse proxy, before reaching the application-server path that handles the request.
+> 
+> So, in the common HTTPS-over-TCP case, the simplified sequence is:
+> **URL parsing → DNS resolution → TCP connection → TLS handshake → HTTP request → network/proxy infrastructure → application server.**
+> 
+> One important distinction is that **DNS does not send the HTTP request**. DNS resolves the hostname; the HTTP request is sent afterward using the resolved destination."*
+
+### Assessment & Precision Check
+* **Status**: 🟢 **KNOW (100 / 100 XP)**
+* **Precision Rule**: Explicitly avoids the common beginner trap of believing DNS converts URLs into HTTP requests. Correctly identifies transport handshake and cryptographic session setup as prerequisites to socket byte transmission.
+
+---
+
+## Stage 3 Timed Interview Defense: TTFB Decomposition & Diagnosis
+
+### Candidate Answer (Spoken Delivery)
+> *"A 2-second TTFB means the browser waited 2 seconds from initiating the request until receiving the first response byte. I’d treat it as a measurement to decompose, not automatically as backend execution time.
+> 
+> I’d first inspect the browser’s network timing breakdown. I want to separate **DNS lookup, connection establishment, TLS negotiation, request/queueing time, and server response time**.
+> 
+> If DNS timing is high, I’d investigate DNS resolution and caching. If connection time is high, I’d investigate TCP or, for HTTP/3, QUIC establishment and network latency. If TLS time is high, I’d investigate the TLS handshake and whether the connection is being reused.
+> 
+> Then I’d look at the server-side timing and tracing. If the request has already reached the server and there is significant time spent in application processing, database queries, downstream APIs, queueing, or proxy/load-balancer waits, that points toward backend or infrastructure latency.
+> 
+> I’d also check whether this is a **new connection or a reused persistent connection**. With HTTP/2, multiple requests can share an established connection, so DNS, TCP and TLS shouldn't normally repeat for every request.
+> 
+> So I would correlate **browser DevTools timing + server access logs + distributed tracing**, rather than diagnosing a 2-second TTFB from the single number alone.
+> 
+> The key distinction is: **TTFB is an end-to-end timing measurement; it is not synonymous with backend execution time.**"*
+
+### Assessment & Precision Check
+* **Status**: 🟢 **KNOW (98 / 100 XP)**
+* **Diagnostic Standard**: Decomposes TTFB into network transit vs backend computation. Pairs client-side waterfall timings with server-side APM distributed traces.
+
+---
+
+## Follow-Up Curveball: The 1,982ms Infrastructure Mystery
+
+### Question
+> *"If DNS, TCP, and TLS are 0ms (HTTP/2 connection reuse), 'Waiting for server response' is 2,000ms, but backend APM shows database query and controller logic took only 18ms total, where did the remaining 1,982ms go between the browser and that application server?"*
+
+### Candidate Model Defense
+> *"When client TTFB is 2,000ms but the application server reports only 18ms of actual execution, the remaining 1,982ms was lost in the **network transit and intermediary infrastructure layers**:
+> 
+> 1. **Reverse Proxy & Load Balancer Queueing**:
+>    - The request reached the ingress controller (Nginx, AWS ALB, Cloudflare), but worker threads or upstream connection pools were saturated. The request sat idle in an ingress queue before being dispatched to the Node.js / application container.
+> 2. **Geographic Network Latency & Packet Loss**:
+>    - Physical distance between client and origin (e.g. agent in South Africa hitting a US-East server). High RTT, TCP window scaling issues, or packet retransmissions silently add hundreds of milliseconds.
+> 3. **API Gateway / Middleware Overhead**:
+>    - Pre-routing middleware: synchronous rate limiting (Redis connection latency), token authentication / OAuth validation calls, or WAF (Web Application Firewall) packet inspection.
+> 4. **Response Buffering by Intermediaries**:
+>    - The backend sent its first byte at 18ms, but an intermediate reverse proxy had output buffering enabled (e.g. `proxy_buffering on` in Nginx). The proxy held the byte stream until a full buffer chunk (4KB–16KB) was filled before flushing across the wire to the client.
+> 
+> **Diagnostic Action**: Inspect the timestamps on the load balancer access log (`time_to_first_upstream_byte` vs `upstream_response_time`) and trace headers (`X-Request-Start` vs application entry timestamp) to pinpoint the exact hop where queueing occurred."*
+

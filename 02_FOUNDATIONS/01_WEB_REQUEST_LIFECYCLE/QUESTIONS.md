@@ -22,3 +22,17 @@ An agent clicks **Submit Payment**. The button does not update to show "Loading.
 ```text
 DNS → TCP/QUIC → TLS → HTTP → HTML → Browser → JavaScript → React
 ```
+
+---
+
+### Stage 2 AI Tutor Checkpoint: Sequence Validation
+*What exact sequence of technical steps must occur before an HTTP request can reach the application server?*
+
+---
+
+### Stage 3 Timed Interview Defense: TTFB Decomposition & Diagnosis
+*Explain TTFB (Time to First Byte): what components make up that number, and how do you determine whether a 2-second TTFB is caused by the client's network, DNS, TLS negotiation, or backend server execution?*
+
+### Follow-Up Curveball: The 1,982ms Infrastructure Mystery
+*If DNS, TCP, and TLS are 0ms (HTTP/2 reuse), 'Waiting for server response' is 2,000ms, but backend APM shows database and controller logic took only 18ms total, where did the remaining 1,982ms go between the browser and application server?*
+

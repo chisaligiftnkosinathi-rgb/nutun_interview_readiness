@@ -17,3 +17,14 @@
 * **Project**: `axis_clean`
 * **Libraries**: `framer-motion`, Tailwind CSS
 * **What was implemented**: Leveraged GPU-accelerated CSS properties (`transform`, `opacity`) to animate UI elements smoothly at 60fps without triggering layout recalculations.
+
+---
+
+## 4. Exit Test Demonstration & Status Record
+* **Topic**: Web Request Lifecycle, Connection Handshakes & TTFB Diagnosis
+* **Stage 2 Checkpoint (Sequence Validation)**: **PASSED (100 / 100 XP)**
+  * Correctly separated DNS resolution from HTTP transmission; verified TCP, TLS 1.3, and reverse proxy handoffs.
+* **Stage 3 Timed Interview Defense (TTFB)**: **PASSED (98 / 100 XP)**
+  * Decomposed TTFB into network transit vs backend execution; paired Chrome DevTools timing tab with APM distributed tracing; defended against the 1,982ms reverse proxy buffer/queueing curveball.
+* **Current Competency Status**: 🛡️ **INTERVIEW READY (PASSED)**
+

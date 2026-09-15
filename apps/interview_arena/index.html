@@ -513,11 +513,14 @@
         interviewBadge.textContent = "🟢 PASS (INTERVIEW READY)";
         interviewBadge.className = "px-3 py-1 rounded text-xs font-bold bg-green-950 text-green-400 border border-green-800";
         interviewCorrection.textContent = "Outstanding explanation! You clearly explained that TTFB encompasses network latency (DNS, TCP, TLS, and request transit) plus backend processing time. Inspecting the Chrome DevTools Network Waterfall Timing tab isolates whether the bar is stalled on 'Initial connection', 'SSL', or 'Waiting for server response'.";
-        interviewFollowup.textContent = "If TTFB is 2,500ms, but backend APM reveals the database query and controller took only 12ms total, what infrastructure layers between the browser and backend server would you investigate first?";
-        globalXP = 150;
+        interviewFollowup.innerHTML = `<strong>"Okay Gift: DNS, TCP, and TLS are 0ms (HTTP/2 reuse). 'Waiting for server response' is 2,000ms. But backend APM shows database and controller logic took only 18ms total. Where did the remaining 1,982ms go?"</strong>
+        <div class="mt-2 text-slate-300 not-italic">
+          <strong>Key Defense Layers:</strong> 1) Reverse proxy queueing (Nginx/ALB worker saturation), 2) Geographic RTT / packet retransmission, 3) API Gateway middleware (OAuth/Rate-limiting Redis stalls), and 4) Reverse proxy response buffering (holding byte stream until full buffer chunk).
+        </div>`;
+        globalXP = 200;
         globalStatusDisplay.textContent = "🛡️ INTERVIEW READY";
         globalStatusDisplay.className = "font-bold text-green-400 ml-1";
-        exitCardStatus.textContent = "🛡️ INTERVIEW READY (PASSED)";
+        exitCardStatus.textContent = "🛡️ INTERVIEW READY (PASSED - 200 XP)";
         exitCardStatus.className = "p-2.5 rounded bg-green-950/60 border border-green-800 text-center font-bold text-green-400 font-mono";
       } else {
         interviewBadge.textContent = "🟡 REVISE PRECISION";
