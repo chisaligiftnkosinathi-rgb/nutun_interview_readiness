@@ -127,3 +127,147 @@ If hybrid retrieval still fails to locate policy `AR-2026-17`:
 * The frontend suppresses generation.
 * The UI displays an explicit fallback state: *"Policy AR-2026-17 could not be located in current guidelines. Please check the policy number or consult your team lead."*
 * We never allow the model to guess or substitute an adjacent policy as truth."*
+
+---
+
+## Q8.3: Accessible Citations & Grounding UI Architecture
+
+### Question
+> *"How do you design and architect the React frontend so that agents can audit citations `[1]` and `[2]`, the citations are accessible to keyboard and screen-reader users, and incomplete citation markers during streaming don't cause broken or flickering UI?"*
+
+### Verified Candidate Answer
+
+#### 1. The Data Contract: Decoupling Prose from Evidence
+The frontend must never guess what `[1]` means from raw text. The LLM’s generated prose is **not** the source of truth—it is merely conversational synthesis. 
+
+The backend stream transmits structured citation metadata *prior to or concurrently with* the token stream:
+
+```typescript
+interface CitationMetadata {
+  id: string;              // e.g. "1"
+  documentId: string;      // e.g. "DOC-POL-2026-04"
+  documentTitle: string;   // e.g. "Debt Rescheduling & Interest Waiver Policy"
+  version: string;         // e.g. "v2.4"
+  section: string;         // e.g. "Section 4.2: First-Time Defaulters"
+  similarityScore: number; // e.g. 0.89
+  excerpt: string;         // Exact verbatim policy passage injected into prompt
+  authorizedUrl?: string;  // Internal link to full PDF in Nutun Doc Vault
+}
+
+interface RAGStreamResponse {
+  type: 'CITATIONS' | 'TOKEN' | 'DONE';
+  citations?: Record<string, CitationMetadata>; // Keyed by citation ID ("1", "2")
+  chunk?: string;
+}
+```
+
+The rendered `[1]` tag is therefore a **typed foreign key into trusted citation metadata**, ensuring complete provenance.
+
+---
+
+#### 2. React Rendering Architecture
+
+```text
+Incoming Token Stream ("...waived up to 50% [1]...")
+          │
+          ▼
+Incremental Stream Parser (Token Buffer)
+  - Identifies completed delimiters [1] vs raw text
+          │
+          ▼
+Message AST Representation:
+  - TextNode: "waived up to 50% "
+  - CitationNode: { refId: "1", status: "VALID" }
+          │
+          ▼
+Citation Reference Lookup: citations["1"]
+          │
+          ▼
+Interactive Accessible Button: <CitationPill refId="1" metadata={citations["1"]} />
+          │ (onClick / Enter / Space)
+          ▼
+Evidence Drawer / Side Inspector: <PolicyAuditDrawer metadata={citations["1"]} />
+```
+
+* **Interaction Model**: Clicking `[1]` opens an **Evidence Drawer** on the right side of the screen displaying the exact policy title, section, version, and the verbatim excerpt used by the model. The agent audits the actual policy without switching tabs or losing their active call screen.
+
+---
+
+#### 3. Accessibility Invariants (WCAG 2.1 AA)
+
+A citation must never be a decorative `<span>` or rely solely on color. It is an interactive control:
+
+1. **Semantic Control**: Rendered as a native HTML `<button type="button">`.
+2. **Descriptive Accessible Name**:
+   ```tsx
+   <button
+     type="button"
+     className="citation-pill"
+     aria-expanded={isDrawerOpen && activeCitationId === metadata.id}
+     aria-controls={`citation-drawer-${metadata.id}`}
+     onClick={() => openDrawer(metadata.id)}
+   >
+     <span>[1]</span>
+     <span className="sr-only">
+       {`Citation 1: ${metadata.documentTitle}, ${metadata.section}`}
+     </span>
+   </button>
+   ```
+   A screen-reader announces: *"Citation 1: Debt Rescheduling & Interest Waiver Policy, Section 4.2, button collapsed"*.
+3. **Keyboard & Focus Management**:
+   - Focusable via standard `Tab` order.
+   - Activates on `Enter` or `Space`.
+   - Distinct, high-contrast focus ring (`focus-visible: ring-2 ring-cyan-400`).
+   - When the drawer opens, focus is programmatically shifted to the drawer header or close button.
+   - When the drawer closes (via `Escape` or Close button), focus **returns programmatically to the triggering citation button** via a stored `ref`.
+
+---
+
+#### 4. Streaming Correctness: Incomplete Delimiters & Buffer State
+If chunks arrive as:
+* Chunk 1: `"...according to policy ["`
+* Chunk 2: `"1] ..."`
+
+Blindly rendering raw markdown or string tokens would display a broken open bracket `[`, triggering visual layout shifts and accessibility glitches.
+
+**The Solution: Lookahead Token Buffering**:
+1. The parser maintains a lookahead buffer:
+   - If an open bracket `[` is detected without a matching `]`, the parser holds those characters in the buffer ref for up to 10 characters or until the next chunk arrives.
+   - If the next chunk supplies `1]`, the parser emits a single, complete `CitationNode({ refId: "1" })`.
+2. **Buffer Flush on EOF**:
+   - If the stream terminates and the bracket never closes (e.g. text literally meant `[unrelated notes`), the buffer flushes as raw text. Zero dropped characters.
+3. **Stable Identity**:
+   - Each completed citation pill receives a stable key: `key={`citation-${messageId}-${refId}`}`, preventing unmount/remount churn during subsequent stream chunks.
+
+---
+
+### The Hostile Curveball Defense
+
+> **Interviewer**: *"The model cites `[3]`, but the backend only supplied citations `[1]` and `[2]`. What should the React application do? And should it simply hide `[3]` so the agent doesn't see an ugly error?"*
+
+### Candidate Defense
+*"No, absolutely not. **Hiding `[3]` would be an egregious safety and compliance violation in a financial application.**
+
+#### 1. Why Hiding `[3]` is Dangerous
+If the model states:
+> *'You qualify for an immediate 40% settlement discount [3].'*
+
+and the frontend silently hides `[3]`, the agent reads the sentence as authoritative, ungrounded truth. In reality, `[3]` is an **hallucinated citation**—the LLM invented a reference that has zero grounding in authorized policy documents.
+
+#### 2. The Correct Frontend Architectural Remedy
+The frontend must treat an orphaned citation reference as an **Ungrounded Assertion Warning**:
+
+1. **Render an Explicit Warning Indicator**:
+   - Render `[3]` with a distinct amber alert badge: `<CitationWarning refId="3" />`.
+   - Accessible label: *"Warning: Citation 3 is not supported by retrieved policies."*
+2. **Inspectable Hallucination Drawer**:
+   - When the agent clicks `[3]`, the drawer displays:
+     > *"⚠️ Ungrounded Statement: This statement was generated by the AI without a matching policy citation in Nutun's approved guidelines. Do not commit this term to the customer without managerial sign-off."*
+3. **Disable Auto-Populate Actions**:
+   - If the co-pilot has a feature that copies terms into the financial arrangement form, any proposal containing ungrounded citations (`[3]`) has its auto-fill button disabled.
+4. **Log Compliance Telemetry**:
+   - Dispatch an telemetry event to the backend audit log: `AI_UNGROUNDED_CITATION_DETECTED`, flagging the query for prompt tuning and compliance review.
+
+**The Governing Rule**:
+> **In financial software, UI aesthetics never supersede factual truth. An explicit warning protects the agent, the customer, and the business from legal liability."*
+
