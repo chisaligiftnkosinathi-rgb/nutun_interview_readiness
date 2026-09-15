@@ -438,3 +438,165 @@ export function ArrangementWaiverPanel({ arrangementId, currentBalanceCents }) {
 
 > **The Architectural Rule**:
 > **“UX responsiveness must never compromise transactional truth. User actions belong in event handlers; pure UI belongs in Render; layout measurements belong in `useLayoutEffect`; external synchronization belongs in `useEffect`.”**
+
+---
+
+## Q3.3: Component Identity, Keys & Preventing Cross-Customer Data Leaks
+
+### Scenario — Nutun Debtor Workspace Context Switch
+An agent is handling Customer A (Absa Loan portfolio) in the collections workspace.
+The agent types draft negotiation notes into the payment form:
+> *“Customer agreed to R1,850/month pending salary deposit on the 25th...”*
+
+Suddenly, an incoming CTI event switches the workspace context to:
+> **Customer B (Woolworths Store Card portfolio)**
+
+The parent workspace re-renders. The arrangement form remains mounted at the same location in the component hierarchy:
+```tsx
+// Before context switch (Customer A)
+<WorkspaceLayout>
+  <ArrangementForm customerId="CUST-A" defaultBook="Absa" />
+</WorkspaceLayout>
+
+// After context switch (Customer B)
+<WorkspaceLayout>
+  <ArrangementForm customerId="CUST-B" defaultBook="Woolworths" />
+</WorkspaceLayout>
+```
+To the agent's shock, the form still displays Customer A's draft settlement notes and proposed repayment amount under Customer B's header!
+
+### Interview Question
+> **“Gift, walk me through exactly how that can happen in React under the hood. What does React's `key` prop actually do mechanically during reconciliation? Why is `key` NOT a security boundary? Why can't we just put `key={Math.random()}` on every component? And if Customer A had an AI stream running when the agent switched to Customer B, show me where your architecture prevents Customer A's late tokens from entering Customer B's UI.”**
+
+---
+
+### Verified Candidate Answer
+
+#### 1. Why the Draft Leaked: Component Identity vs. Data Identity
+What occurred here is a fundamental clash between **component identity** and **data identity** in React’s reconciliation engine:
+
+1. **State Lives with the Fiber Representation, Not the JSX**:
+   - In React, local state (`useState`, `useReducer`) is associated with the component's position and identity in React's internal Fiber tree.
+   - When the parent re-renders with `customerId="CUST-B"`, React evaluates the element at that exact position in the tree:
+     * *Is the element type identical?* **Yes** (`ArrangementForm`).
+     * *Did its key change?* **No key was provided**, so React falls back to position-based identity.
+2. **Fiber Node Reuse**:
+   - React concludes: *“This is the exact same component instance. I do not need to unmount DOM nodes or recreate state. I will simply pass the new props (`customerId="CUST-B"`) to the existing Fiber instance.”*
+3. **The Trap of Local Draft State**:
+   - The state—`const [notes, setNotes] = useState('Customer agreed...')`—was initialized once during Customer A's mount.
+   - Props changed, but local uncontrolled or draft state was **never reset**. The Fiber preserved its hook state memory.
+   - As a result, Customer B's workspace inherits Customer A's confidential financial draft.
+
+---
+
+#### 2. What `key` Actually Does Mechanically
+When you assign an explicit domain key:
+```tsx
+<ArrangementForm key={selectedCustomer.id} customer={selectedCustomer} />
+```
+You explicitly instruct React's reconciler: **"The identity of this component is strictly bound to this specific customer ID."**
+
+When `selectedCustomer.id` transitions from `CUST-A` to `CUST-B`:
+1. React detects a **key mismatch** at that tree position.
+2. React marks the old Fiber node for deletion (`Deletion` effect tag).
+3. It unmounts Customer A's component, executing all cleanup effects.
+4. It completely destroys the previous Fiber's local state memory.
+5. It mounts a brand-new Fiber instance for Customer B, initializing fresh state and clean form fields.
+
+---
+
+#### 3. Why `key` is NOT a Security Boundary (The 4-Layer Defense)
+In an enterprise financial application like Nutun, **a React `key` alone is not a security boundary and cannot guarantee data isolation**:
+* **In-Flight Asynchronous Operations**: If Customer A had an AI copilot stream running or a financial calculation in flight, unmounting the component does not terminate the network stream unless wired to an `AbortController`. Unhandled promises can still resolve into global stores.
+* **Cached State & Global Stores**: If drafts are saved in global state (Redux/Zustand) or a query cache (TanStack Query) under generic keys like `'arrangement-draft'`, remounting the component simply rehydrates Customer A's cached draft.
+* **Regulatory Consequence**: Disclosing one debtor's financial balances or settlement offers to another consumer is a severe confidentiality breach and regulatory violation.
+
+##### The Production 4-Layer Identity Agreement:
+```text
+┌────────────────────────────────────────────────────────────────────────┐
+│                   THE 4-LAYER IDENTITY AGREEMENT                       │
+│                                                                        │
+│ 1. UI IDENTITY (React Key)                                             │
+│    • Keyed by `customerId`: forces clean unmount & state wipe on switch │
+│                                                                        │
+│ 2. ASYNC LIFECYCLE (AbortController + Epoch)                           │
+│    • Switching customer immediately cancels in-flight streams & fetch  │
+│    • Request ID epoch drops any resolving microtasks                   │
+│                                                                        │
+│ 3. CACHE IDENTITY (Scoped Keys)                                        │
+│    • TanStack Query / Form Drafts strictly keyed by `['draft', custId]`│
+│    • Drafts are partitioned strictly by customer ID                    │
+│                                                                        │
+│ 4. TRANSACTIONAL AUTHORIZATION (Backend Contract)                      │
+│    • Submitting an arrangement requires `{ customerId, expectedHash }` │
+│    • Backend rejects the payload if customerId doesn't match active call│
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+> **The Invariant**:
+> **“The UI identity, the network lifecycle, the client-side cache, and the backend authorization token must all agree on which customer is active.”**
+
+---
+
+### The Hostile Curveball Defenses
+
+#### Curveball 1:
+> **Interviewer**: *"Why don't we just put `key={Math.random()}` on every component? Every render gets a new identity. That guarantees no stale state. Why isn't that the safest architecture for a financial application?"*
+
+#### Candidate Defense:
+*"That sounds attractive on the surface because it feels like an aggressive fail-safe, but in reality, `key={Math.random()}` destroys the very invariants that make an interactive financial application usable, accessible, and correct:
+
+1. **The Form Input Focus Death Spiral**:
+   - Every single keystroke updates state, which triggers a re-render.
+   - Because `key` is random, React unmounts the component and remounts a new DOM node.
+   - The `<input>` that had focus is **physically removed from the DOM**, resetting browser focus to `document.body`! The agent types the first character, loses focus, and subsequent typing goes nowhere or triggers global hotkeys.
+2. **Destruction of Legitimate In-Flight User State**:
+   - A financial workspace relies on local draft state while the agent is negotiating. If an ambient dialler event, WebSocket heartbeat, or clock tick triggers a parent re-render, `Math.random()` instantly wipes out whatever the agent was typing. You haven't prevented stale state; you've created **uncontrolled data loss**.
+3. **Effect & Network Flooding**:
+   - Every mount re-executes `useEffect` and `useLayoutEffect`. If the component loads customer verification rules or account summaries on mount, `key={Math.random()}` fires those network requests on **every single keystroke**, DDOSing our internal API gateways.
+4. **Total Accessibility Destruction**:
+   - Screen readers maintain reading cursors in the Accessibility Tree. Tearing down and remounting the DOM on every state change resets screen reader anchors, repeatedly re-announcing the top of the page and disorienting the operator.
+
+**The Engineering Principle**: A `key` represents **domain identity**, not a blunt hammer to wipe memory. It must match the real-world business entity: stable while working on Customer A, transitioning cleanly when Customer B takes the desk."*
+
+---
+
+#### Curveball 2:
+> **Interviewer**: *"The customer changes while an AI response is streaming. The old stream was not aborted. The old response arrives after the new customer loads. Show me exactly where your architecture prevents Customer A's response from entering Customer B's UI."*
+
+#### Candidate Defense:
+*"Here is the exact mechanism that guarantees Customer A's late streaming tokens cannot contaminate Customer B's workspace:
+
+```text
+CUSTOMER A ACTIVE (epoch = 1, streamRequestId = "REQ-A-101")
+   │
+   ▼
+[ SSE Stream A In-Flight ] ──► Chunks arriving...
+   │
+   ▼
+AGENT SWITCHES TO CUSTOMER B:
+   • activeCustomerRef.current = "CUST-B"
+   • activeEpochRef.current = 2 (Monotonically incremented)
+   │
+   ▼
+STREAM A CHUNK ARRIVES LATE:
+   • Chunk payload carries: `{ customerId: "CUST-A", requestId: "REQ-A-101" }`
+   │
+   ▼
+[ THE INVARIANT CHECK IN THE STREAM REDUCER / CONTROLLER ]:
+   if (
+     chunk.customerId !== activeCustomerRef.current || 
+     chunk.requestId !== activeStreamRequestRef.current
+   ) {
+     // DISCARD SILENTLY! Zero state mutation, zero DOM update.
+     return;
+   }
+```
+
+Even if `abort()` failed or network packets were already buffered in the browser's TCP stack:
+1. The stream controller checks the incoming chunk's `customerId` and `requestId` against the active workspace's **authoritative customer epoch**.
+2. Because `chunk.customerId ("CUST-A") !== activeCustomerRef.current ("CUST-B")`, the chunk is discarded at the boundary.
+3. React's state reducer is never invoked for that chunk, no state mutations occur, and Customer B's workspace remains completely uncontaminated.
+
+This proves our governing rule:
+> **“Cancellation improves efficiency; Request Identity establishes correctness.”**"*
