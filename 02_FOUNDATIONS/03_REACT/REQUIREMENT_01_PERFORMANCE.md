@@ -16,7 +16,21 @@ In a contact center environment:
 
 ---
 
-## 2. Mechanical Reality: How React Performance Actually Works
+## 2. Real-World Mental Models: The Contact Centre Scaffolding
+
+Before diving into low-level mechanics, every Nutun performance concept is anchored in an operational contact centre reality:
+
+| Technical Concept | Real-World Operational Model | What It Prevents |
+| :--- | :--- | :--- |
+| **Fiber Reconciliation** | **The Company Department Tree (CEO, Finance, Operations)**: An auditor reviewing departments can pause after any unit of work to handle an urgent phone call. | Main-thread lockups during large state changes. |
+| **DOM Virtualization** | **The Receptionist Desk**: The archive room holds 5,000 debtor folders, but the receptionist only lays the 20 currently needed files on the desk. | 50,000+ DOM nodes exhausting browser memory and freezing layout. |
+| **`React.memo`** | **The Unchanged Monthly Statement**: If a debtor's balance and terms haven't changed, the agent doesn't recalculate the entire statement from scratch. | Recursive re-renders cascading down 50 dashboard widgets. |
+| **`useMemo` / `useCallback`** | **The Certified Stamp Reference**: Stamping a document with an existing authorized signature instead of re-signing a brand-new certificate on every breath. | Breaking shallow equality comparisons in memoized children. |
+| **React Keys** | **The Customer Account ID Badge**: When records are sorted by debt amount, the agent tracks folders by Account Number, not by folder position on the desk. | Component state leaking into the wrong customer's form fields. |
+
+---
+
+## 3. Mechanical Reality: How React Performance Actually Works
 
 ### 2.1 What Actually Triggers a React Re-Render?
 A component function executes (re-renders) if and only if:

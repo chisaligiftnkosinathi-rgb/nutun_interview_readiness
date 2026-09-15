@@ -83,7 +83,24 @@ The commit phase applies the completed result to the host environment.
 
 ## D — Fiber
 
-### Candidate Answer
+### Real-World Operational Model
+**The Company Department Tree**:
+Imagine a contact centre company hierarchy:
+* **CEO** = Parent Fiber
+* **Finance** = `child` pointer of CEO
+* **Operations** & **Technology** = `sibling` pointers sharing the same parent
+* **Debtors** = `child` pointer of Finance
+* **Finance** = `return` pointer of Debtors (where completed work reports back)
+
+### The Contact Centre Challenge
+Imagine you are managing a contact centre with **5,000 customer records**:
+* React begins a massive background UI recalculation across 5,000 debtor accounts.
+* In the middle of reviewing the Debtors department, a customer calls and the agent types into the search box.
+* The search keystroke is urgent (needs <16ms response). The 5,000 records calculation is non-urgent.
+* **Under the legacy Stack Reconciler**: JavaScript relied on the recursive call stack. Once recursion started, it could not yield. It was like an auditor insisting on reviewing all 5,000 files before picking up the phone. The UI frozen and the agent's keystroke was delayed.
+* **Under Fiber**: React converts the call stack into an explicit linked list on the JavaScript heap. React pauses after any department or record (`if (shouldYield())`), yields control so the browser paints the keystroke instantly, and then resumes the 5,000 records exactly where it left off.
+
+### Candidate Answer (Interview Ready Defense)
 Fiber addresses React's ability to organize, schedule, and prioritize rendering work.
 
 Rather than running a synchronous recursive stack walk (which blocked the main JavaScript thread in React 15 and earlier), Fiber models rendering as discrete work units. Each Fiber node represents component or host-element work and identity, connected through explicit structural relationships:
@@ -91,14 +108,14 @@ Rather than running a synchronous recursive stack walk (which blocked the main J
 * `sibling`: Next sibling Fiber node.
 * `return`: Parent Fiber node (the return destination for completed work units).
 
-This internal architecture allows React to:
-1. Break rendering work into small, time-sliced units.
+Because this tree structure is represented explicitly on the heap rather than implicitly on the call stack, React's cooperative scheduler can:
+1. Break rendering work into small, time-sliced units via `while (workInProgress !== null && !shouldYield())`.
 2. Yield execution back to the browser Event Loop for urgent user interactions (keystrokes, clicks).
-3. Prioritize high-urgency updates over background data fetching.
+3. Prioritize high-urgency updates over background data fetching via lane-based scheduling.
 4. Discard obsolete render trees if newer state arrives before completion.
 
 ### Assessment
-🟢 **KNOW**
+🟢 **KNOW (Scaffolded & Verified)**
 
 ### Precision Correction
 Do NOT describe Fiber merely as "a singly-linked list." That is incomplete.

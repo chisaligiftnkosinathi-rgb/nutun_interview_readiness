@@ -18,6 +18,33 @@ How would an engineer improve it?
 How does that matter to Nutun?
 ```
 
+### The 10-Layer Pedagogical Pipeline
+Analogy provides the mental scaffold; technical mechanism provides the engineering rigor. We never start with abstract terminology; we build understanding progressively:
+
+```text
+1. REAL-WORLD SCENARIO      (Contact centre, telephone queue, company hierarchy)
+        ↓
+2. INTUITIVE MENTAL MODEL   (The CEO & department tree, the receptionist desk)
+        ↓
+3. INTERACTIVE CHALLENGE    (What happens when an agent types while 5,000 records update?)
+        ↓
+4. TECHNICAL TRANSLATION    (Fiber nodes: child, sibling, return; work loop)
+        ↓
+5. CODE MECHANISM           (while (workInProgress !== null && !shouldYield()))
+        ↓
+6. COMMON MISCONCEPTION     ("Is commit phase also interruptible?")
+        ↓
+7. CHECKPOINT               (Sequence & mechanic verification)
+        ↓
+8. TIMED INTERVIEW DEFENSE  (60-second pressure response)
+        ↓
+9. HOSTILE FOLLOW-UP / TRAP (The edge cases that trip up mid-level engineers)
+        ↓
+10. INTERVIEW READY 🛡️      (Demonstrated spoken mastery)
+```
+
+> **The Golden Rule of Analogies**: The analogy (e.g. "CEO and department tree") is the teaching scaffold. But the candidate must always translate the scaffold into authoritative engineering reality (*"Fiber nodes linked via child, sibling, and return pointers allocated on the JavaScript heap driven by an interruptible work loop"*). Never answer an interview question with just an analogy.
+
 ---
 
 ## 2. The Four Competency Status Levels

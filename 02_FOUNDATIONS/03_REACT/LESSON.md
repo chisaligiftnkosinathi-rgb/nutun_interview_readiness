@@ -117,8 +117,49 @@ This evaluates into a **React element description**—a lightweight, immutable p
 
 ## 5. Fiber Architecture: Work Units & Scheduling
 
-Fiber is React's internal architecture designed to represent units of rendering work and component identity.
+## 5. Fiber Internal Architecture: The Work Engine
 
+### 5.1 The Intuitive Real-World Model: The Company Department Tree
+Before jumping to pointers and data structures, consider how an enterprise contact centre operates:
+
+```text
+                  CEO (Parent Fiber)
+                   │
+                 child
+                   ↓
+                Finance ──sibling──> Operations ──sibling──> Technology
+                   │                     │                      │
+                 child                 child                  child
+                   ↓                     ↓                      ↓
+                Debtors              Collections             Frontend
+                   │
+                return
+                   ↑
+                Finance
+```
+
+| Real-World Department Entity | React Fiber Counterpart | Structural Purpose |
+| :--- | :--- | :--- |
+| **CEO** | Parent Fiber | Root of authority and state distribution |
+| **Finance** | `child` pointer of CEO | The first direct report React delegates work into |
+| **Operations** | `sibling` pointer of Finance | Peer department sharing the same parent (CEO) |
+| **Technology** | `sibling` pointer of Operations | Next peer department sharing the same parent |
+| **Debtors** | `child` pointer of Finance | Sub-unit managed within Finance |
+| **Finance** | `return` pointer of Debtors | Destination where completed work reports back |
+
+### 5.2 The Contact Centre Challenge (Why Fiber Exists)
+Imagine you are managing a contact centre with **5,000 customer records**:
+1. React begins processing a massive background UI recalculation across 5,000 debtor accounts.
+2. While React is in the middle of reviewing the Debtors department, a customer phones in and the agent types an ID number into the search box.
+3. The keystroke is **urgent** (needs 16ms response time to prevent perceived lag). The background 5,000-record recalculation is **non-urgent**.
+
+**The Stack Reconciler Failure**:
+Under the legacy recursive Stack Reconciler, React relied on the JavaScript call stack. Once recursion started, it could not pause. It was like an auditor insisting on reading all 5,000 files before allowing anyone to speak. The agent's keystroke was blocked, causing typing lag and dropped calls.
+
+**The Fiber Solution**:
+Fiber breaks this monolithic call stack into **a singly-linked list on the JavaScript heap**. After processing each department or record, React pauses, checks the clock (`if (shouldYield())`), yields control to the browser so the agent can type instantly, and then picks up where it left off.
+
+### 5.3 The Technical Mechanics: `child`, `sibling`, and `return`
 Instead of a monolithic recursive call stack, Fiber models the component tree as nodes linked through explicit structural pointers:
 * `child`: Points to the first direct child Fiber.
 * `sibling`: Points to the next sibling Fiber.
@@ -134,10 +175,20 @@ Instead of a monolithic recursive call stack, Fiber models the component tree as
    CustomerHeader Fiber ──(sibling)──► Balance Fiber
 ```
 
+Because traversal is driven by a cooperative work loop:
+```javascript
+function workLoopConcurrent() {
+    // Perform work until scheduler tells us time slice expired
+    while (workInProgress !== null && !shouldYield()) {
+        performUnitOfWork(workInProgress);
+    }
+}
+```
+
 This pointer-based structure allows React's scheduler to:
 1. Break rendering work into incremental time-sliced chunks.
 2. Pause render work to yield control back to the browser Event Loop for urgent user interactions (keystrokes, mouse clicks).
-3. Prioritize urgent user-input updates over low-priority background fetches.
+3. Prioritize urgent user-input updates over low-priority background fetches using lanes.
 4. Discard obsolete render work when newer state arrives before completion.
 
 ---

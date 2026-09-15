@@ -6,23 +6,33 @@
 
 ---
 
-## 1. The 4-Phase System Architecture
+## 1. The 10-Layer Pedagogical System Architecture
+
+The engine uses a 10-layer progression from intuitive real-world reality to hostile technical defense:
 
 ```text
-FOUNDATION CURRICULUM (02_FOUNDATIONS)
-          │
-          ▼
-PHASE 1: LEARNING ENGINE (Study → Concept Breakdown → Code Evidence → Checkpoint)
-          │
-          ▼
-PHASE 2: AI TUTOR (Real-time Precision Corrections → Sequence Validation → Challenge Prompts)
-          │
-          ▼
-PHASE 3: INTERVIEW ENGINE (Job-Spec Questions → 60s Pressure Timer → 6-Dimension Rubric)
-          │
-          ▼
-PHASE 4: INTERVIEW ARENA (Gamified Mastery → XP → Streaks → Boss Rounds → Exit Tests)
+1. REAL-WORLD SCENARIO      (Contact centre, telephone queue, company hierarchy)
+        ↓
+2. INTUITIVE MENTAL MODEL   (The CEO & department tree, the receptionist desk)
+        ↓
+3. INTERACTIVE CHALLENGE    (What happens when an agent types while 5,000 records update?)
+        ↓
+4. TECHNICAL TRANSLATION    (Fiber nodes: child, sibling, return; work loop)
+        ↓
+5. CODE MECHANISM           (while (workInProgress !== null && !shouldYield()))
+        ↓
+6. COMMON MISCONCEPTION     ("Is commit phase also interruptible?")
+        ↓
+7. CHECKPOINT               (Sequence & mechanic verification)
+        ↓
+8. TIMED INTERVIEW DEFENSE  (60-second pressure response)
+        ↓
+9. HOSTILE FOLLOW-UP / TRAP (The edge cases that trip up mid-level engineers)
+        ↓
+10. INTERVIEW READY 🛡️      (Demonstrated spoken mastery)
 ```
+
+> **Principle**: Analogy provides the mental scaffold; technical mechanism provides the engineering rigor. Never present a question without first grounding the concept in an operational scenario.
 
 ---
 
