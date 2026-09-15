@@ -247,18 +247,18 @@ In a high-volume contact centre, agents constantly switch accounts or work acros
 
 #### A. URL-Driven Root State Identity (Source of Truth)
 * The active customer context MUST be driven by the route/URL: `/customers/:customerId/conversations/:conversationId`.
-* **The React Tree Reset Pattern via `key`**:
+* **The React Lifecycle Reset Pattern via `key`**:
   ```tsx
-  // By keying the entire conversation container with customerId + conversationId,
-  // React unmounts the previous conversation instance and mounts a brand-new instance
-  // when an agent navigates from Customer A to Customer B.
+  // We use a route-derived React key to reset component-local state when the customer
+  // or conversation changes. But we NEVER treat that key as a security boundary.
+  // Backend authorization, scoped queries, and generation identity provide the actual isolation.
   <CustomerAIWorkspace 
       key={`${activeCustomerId}:${activeConversationId}`} 
       customerId={activeCustomerId} 
       conversationId={activeConversationId} 
   />
   ```
-  When the key changes, React tears down all local state, refs, and effects for Customer A. The cleanup return function of `useEffect` immediately invokes `controller.abort()`.
+  When the key changes, React unmounts Customer A's workspace instance, firing `useEffect` cleanups that invoke `controller.abort()`. It mounts a clean component instance for Customer B, preventing visual state carry-over.
 
 #### B. The Triple-Bound Validation Invariant
 Every token chunk dispatched from the network or received from a cache must validate three boundary checks:
@@ -278,3 +278,59 @@ if (
 * If using global caching (TanStack Query), cache entries must be segmented under composite query keys:
   `['customers', customerId, 'conversations', conversationId, 'messages']`.
 * Tab A operates on Customer A; Tab B operates on Customer B. Because cache keys and route states are strictly bound to `customerId`, their network streams and state updates never intersect.
+
+---
+
+## Q6.7: Prompt Injection Defense & The Separation of System Instructions from Authorization
+
+### Question
+> *"What is prompt injection, why is this dangerous in a customer-service AI system, and what can you actually do about it? Don't tell me that you can simply write a stronger system prompt."*
+
+### Verified Candidate Answer
+**Prompt Injection** is an attack vector where untrusted data (user messages, customer notes, third-party emails, or retrieved documents) contains adversarial instructions designed to hijack the model's instruction-following heuristics, causing it to disregard its original system constraints and execute the attacker's commands.
+
+In Nutun’s contact centre environment, prompt injection is a critical risk because models process untrusted customer notes while generating legally sensitive debt advice or executing backend tool actions.
+
+The fundamental rule of AI architecture is:
+$$\text{System Instructions} \neq \text{Authorization} \neq \text{Data Access} \neq \text{Output Validation}$$
+
+We never rely on English system prompts to enforce security. Instead, we defend the system using **four structural, non-LLM boundaries**:
+
+```text
+Untrusted Input (Customer Note)
+          │
+          ▼
+1. INGESTION SANITIZATION (Structural Tagging)
+   - Delimit untrusted data using explicit XML/Markdown tags:
+     <untrusted_customer_note> ... </untrusted_customer_note>
+   - System instructions explicitly treat text within tags as passive text, never executable instructions.
+          │
+          ▼
+2. LEAST-PRIVILEGE CONTEXT RETRIEVAL (Data Access Boundary)
+   - The backend retrieves ONLY the documents and ledger rows authorized for the current active account.
+   - Internal debt policies with higher clearance are NEVER fetched into the prompt context.
+   - The model cannot leak data it was never given.
+          │
+          ▼
+3. DETERMINISTIC TOOL GATING (Authorization Boundary)
+   - The LLM has zero direct access to databases, payment gateways, or APIs.
+   - Any emitted tool call (`settleDebt(amount)`) is intercepted by deterministic backend code that evaluates session permissions and business rules.
+   - If an injected model attempts an unauthorized action, deterministic backend code rejects the execution.
+          │
+          ▼
+4. STRUCTURED OUTPUT VALIDATION & EGRESS FILTERING
+   - Enforce JSON schemas (Zod). Reject un-schemaed conversational escapes.
+   - PII and regex scanning on outgoing streams.
+```
+
+### The Hostile Curveball Defense
+> **Interviewer**: *"If prompt injection can never be mathematically eliminated, why would you deploy an LLM into a financial workflow at all?"*
+> 
+> **Candidate Defense**:
+> *"Because in our architecture, **the LLM is a reasoning assistant, not an autonomous transactional actor.**
+> 
+> We treat the LLM the exact same way an enterprise treats a human junior call-centre agent:
+> 1. The agent cannot transfer funds or waive debt without an authorized manager's signature or a deterministic rule-engine approval.
+> 2. The LLM suggests a draft arrangement or summarizes notes, but **all financial state changes require Human-in-the-Loop confirmation or deterministic backend validation**.
+> 3. By decoupling text generation from transactional execution, a prompt injection attack can at worst produce confusing text—it can never trigger an unauthorized financial transaction, bypass account boundaries, or modify database truth."*
+
