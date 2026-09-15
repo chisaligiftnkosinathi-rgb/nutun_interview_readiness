@@ -12,7 +12,11 @@ Comprehensive, evidence-based technical interview preparation curriculum for the
 01_CONTEXT/
 ├── NUTUN/                         # Company profile, scale (18.5M interactions, 10k agents)
 ├── OFFERZEN/                      # Talent partner research, hiring funnel
-└── ROLE/                          # Front-End Engineer job specification analysis
+└── ROLE/                          # Job spec, role map, and master COMPETENCY MATRIX (Control Document)
+    ├── FRONTEND_ENGINEER_JOB_SPEC.pdf
+    ├── JOB_SPEC_EXTRACTED.md
+    ├── JOB_ROLE_INTERVIEW_MAP.md
+    └── JOB_SPEC_COMPETENCY_MATRIX.md   # Master control document linking every lesson to job requirements
 
 02_FOUNDATIONS/
 ├── 00_TECHNOLOGY_ORIGINS/         # Origins → Problem → Solution → Evolution across web stack
