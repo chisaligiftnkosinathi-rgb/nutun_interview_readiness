@@ -189,3 +189,252 @@ Because the browser DOM is **never touched during the Render Phase**, the agent 
 React 18 intentionally double-invokes component functions, reducers, and initializer functions in development to **catch impure side effects in the Render Phase**. 
 
 Because Fiber's Concurrent Mode can pause, discard, and re-run component rendering multiple times before committing, a component render **must be a pure function with zero observable side effects** ($\text{UI} = f(\text{state})$). If a developer mutates global variables, attaches event listeners, or makes HTTP calls directly inside the component body instead of inside `useEffect`, the double render immediately exposes the bug by creating duplicate subscriptions or memory leaks."*
+
+---
+
+## Q3.2: Render Phase vs. Commit Phase & Effect Timing
+
+### Scenario — Nutun Payment Arrangement Settlement Screen
+In the Cheetah Collections CRM, an agent is negotiating a debt settlement. The agent clicks:
+> **"Apply 20% Settlement Waiver"**
+
+React must calculate the revised instalment schedule, update state, render the confirmation preview, commit DOM changes, and synchronize external telemetry.
+
+The interviewer asks:
+> **“Why can the Render phase execute multiple times, be paused, or be completely abandoned without committing to the DOM? What belongs in the Render phase versus the Commit phase? What is the exact execution order between DOM mutations, `useLayoutEffect`, browser paint, and `useEffect`? Why is placing an API call in `useLayoutEffect` an anti-pattern?”**
+
+---
+
+### Verified Candidate Answer
+
+#### 1. The Core Conceptual Separation: Planning vs. Execution
+
+To master React architecture, one must view React as an engine operating in two distinct phases:
+
+```text
+┌────────────────────────────────────────────────────────────────────────────┐
+│                    RENDER PHASE (Planning / Calculation)                   │
+│                                                                            │
+│  • PURE, DETERMINISTIC, NO SIDE EFFECTS                                    │
+│  • Asks: "Given current props & state, what SHOULD the UI look like?"      │
+│  • Evaluates component functions & produces React elements.                │
+│  • Reconciles Fiber nodes.                                                 │
+│  • CAN BE PAUSED, RE-RUN, OR ABANDONED AT ANY TIME BY CONCURRENT REACT!   │
+└─────────────────────────────────────┬──────────────────────────────────────┘
+                                      │ Work completed & coherent
+                                      ▼
+┌────────────────────────────────────────────────────────────────────────────┐
+│                    COMMIT PHASE (Execution / Host Mutation)                │
+│                                                                            │
+│  • SYNCHRONOUS, UNINTERRUPTIBLE, MUTATES THE HOST ENVIRONMENT              │
+│  • Asks: "Apply the completed calculation to the real DOM."                │
+│  • Executes DOM mutations (insert, update, delete).                        │
+│  • Synchronously runs layout effects (`useLayoutEffect`).                  │
+│  • Flips Fiber root pointer (`root.current = workInProgress`).             │
+│  • Yields to browser for Paint, then schedules passive `useEffect`.        │
+└────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+#### 2. Why Can the Render Phase Run Multiple Times (And Why Side Effects Break)?
+
+In Concurrent React, rendering is **cooperative and non-blocking**. If a low-priority render (e.g. background data recalculation or AI streaming text) is in progress, and high-priority input arrives (e.g. an agent typing a settlement amount or clicking a telephony button):
+1. React pauses the background render.
+2. If the state changes while paused, the previous in-progress render is **completely thrown away**.
+3. React restarts rendering from scratch with the newer state.
+
+##### The Catastrophic Anti-Pattern: Side Effects During Render
+```tsx
+// ❌ CRITICAL BUG: Side effect executed during Render!
+function SettlementForm({ debtorId, settlementAmount }) {
+  // If React abandons or restarts this render, this HTTP call or analytics event STILL FIRED!
+  trackEvent('SETTLEMENT_VIEWED', { debtorId, amount: settlementAmount });
+  
+  // Worse: Mutating an external global variable or initiating network mutations
+  window.lastEvaluatedAmount = settlementAmount;
+
+  return <div>Settlement: R{settlementAmount}</div>;
+}
+```
+If React evaluates this component twice (as in development Strict Mode, or when interrupted by user input), the analytics endpoint records duplicate phantom events, and external systems receive unsynchronized commands for UI that was never committed to the user's screen!
+
+##### The Rule:
+> **The Render phase must be a pure projection: $\text{UI} = f(\text{props}, \text{state})$. It must calculate values, return JSX descriptions, and do NOTHING that leaves an irreversible footprint on the outside world.**
+
+---
+
+#### 3. What Belongs in Render vs. Commit vs. Event Handlers?
+
+| Responsibility | Phase / Location | Valid Code Examples | Prohibited Anti-Patterns |
+| :--- | :--- | :--- | :--- |
+| **Pure Calculations & UI Description** | **Render Phase** (Component body) | Computing discounts, formatting currency (`Intl.NumberFormat`), filtering memoized lists, returning JSX. | `fetch()`, `setTimeout`, writing to `localStorage`, mutating external variables. |
+| **User-Initiated Mutations** | **Event Handlers** (`onClick`, `onSubmit`) | Dispatching server actions, triggering payment mutations, generating idempotency keys. | Putting transaction mutations inside `useEffect` or render. |
+| **Synchronous DOM Reading & Layout Adaptation** | **Commit Phase** (`useLayoutEffect`) | Measuring DOM dimensions (`getBoundingClientRect`), adjusting tooltip positions to avoid viewport clipping. | Long-running CPU work, network requests, state updates that trigger layout loops. |
+| **Passive External Synchronization** | **Commit Phase (Post-Paint)** (`useEffect`) | Setting up WebSocket listeners, updating document title, logging analytics, subscribing to external stores. | Synchronously measuring DOM geometry where layout jumps cause visible flicker. |
+
+---
+
+#### 4. The Complete Execution Sequence: Order of Operations
+
+When an agent clicks "Apply Discount" and triggers a state update:
+
+```text
+1. USER EVENT HANDLER FIRES:
+   • Agent clicks button ──► `onClick` handler executes.
+   • `setDiscount(20)` dispatches.
+
+2. RENDER PHASE (Interruptible):
+   • React evaluates `PaymentForm({ discount: 20 })`.
+   • Computes `discountedAmount = amount * 0.8`.
+   • Generates new React element tree.
+   • Reconciler diffs against current Fiber tree and marks mutations on `workInProgress`.
+
+3. COMMIT PHASE (Synchronous & Uninterruptible):
+   • Step 3A: DOM Mutation Pass
+     React applies host changes to the real DOM (e.g. updating input value, updating text).
+   • Step 3B: Layout Effect Pass (`useLayoutEffect`)
+     Synchronously invokes `useLayoutEffect` callbacks.
+     DOM nodes are in their final positions, but the browser has NOT painted yet!
+     If state is updated here, React synchronously re-renders before paint.
+   • Step 3C: Fiber Pointer Flip
+     `root.current = workInProgress`.
+
+4. BROWSER PAINT OPPORTUNITY:
+   • React yields control back to the browser event loop.
+   • The browser C++ engine runs: `Style Recalculate` ──► `Layout` ──► `Paint` ──► `Composite`.
+   • Physical pixels update on the agent's screen.
+
+5. PASSIVE EFFECT PASS (`useEffect`):
+   • React executes queued `useEffect` callbacks asynchronously after paint.
+   • Analytics events, telemetry, and background socket synchronization fire.
+```
+
+---
+
+#### 5. `useLayoutEffect` vs. `useEffect`: When to Use Each
+
+##### The Golden Rule:
+* Default to **`useEffect`** for 99% of synchronization.
+* Use **`useLayoutEffect`** **only** when reading layout properties and mutating the DOM before the browser paints to prevent **visual flickering**.
+
+##### Concrete Contact Centre Example (Tooltip / Popover Positioning):
+An agent hovers over an overdue account badge. A tooltip opens:
+* If rendered via `useEffect`:
+  1. Tooltip mounts at default `(0, 0)`.
+  2. Browser paints the tooltip at the top-left of the screen.
+  3. `useEffect` runs asynchronously, measures the trigger button, and computes `left: 420px, top: 180px`.
+  4. Tooltip jumps across the screen to its corrected position.
+  5. **Result: Perceptible visual jitter and Cumulative Layout Shift (CLS).**
+* If rendered via `useLayoutEffect`:
+  1. Tooltip mounts in the DOM.
+  2. `useLayoutEffect` runs synchronously *before* paint. It reads `getBoundingClientRect()` and applies `left: 420px, top: 180px`.
+  3. Browser paints **only once**, rendering the tooltip directly at its final, correct coordinates.
+  4. **Result: Zero visual jitter.**
+
+---
+
+### The Hostile Curveball Defense
+
+> **Interviewer**: *"A developer says: 'I'll put my payment API call in `useLayoutEffect` because then it happens immediately after the DOM updates, rather than waiting for paint.' Why is that a terrible idea? How would you architect: 'Apply Discount' $\to$ calculate $\to$ save arrangement $\to$ show confirmation?"*
+
+---
+
+### Candidate Defense:
+
+#### 1. Why Putting an API Call in `useLayoutEffect` is an Anti-Pattern:
+*"Placing an API call or transaction dispatch inside `useLayoutEffect` is fundamentally flawed for two reasons:
+
+1. **Blocks the Main Thread & Delays Paint**:
+   `useLayoutEffect` runs **synchronously before the browser can paint**. While calling `fetch()` itself initiates an asynchronous network request, setting up request payloads, headers, or state transitions inside `useLayoutEffect` directly delays the browser from rasterizing the current frame. The agent's screen freezes, unable to reflect that the button was even clicked!
+2. **Confuses Synchronization with Intent**:
+   Effects are meant to **synchronize React state with external systems**. A financial payment submission or discount application is an **intentional user action**, not an ambient synchronization side effect of rendering. If you tie transactions to component mount/update effects, you risk duplicate submissions on re-renders, route transitions, or Strict Mode double-invocations."*
+
+---
+
+#### 2. The Production Architecture for Financial Arrangement Updates:
+
+We strictly decouple **Intent**, **Transactional Truth**, **Optimistic UI**, and **Synchronization**:
+
+```text
+[ USER INTENT ]               Agent clicks "Apply Discount"
+       │
+       ▼
+[ EVENT HANDLER ]            `handleApplyDiscount()` fires:
+                             1. Generates cryptographic `idempotencyKey`.
+                             2. Sets UI to optimistic 'SUBMITTING' state.
+                             3. Initiates server mutation.
+       │
+       ▼
+[ SERVER MUTATION ]          `POST /api/arrangements/{id}/discount`
+                             Authoritative financial engine validates legal limits.
+       │
+       ▼
+[ TRANSACTION COMMIT ]       Server returns `200 OK` with audited settlement contract.
+                             Component commits confirmed state.
+       │
+       ▼
+[ PASSIVE EFFECT ]           `useEffect` fires post-paint:
+                             Emits audit telemetry to compliance logs.
+```
+
+##### Production Implementation:
+```tsx
+export function ArrangementWaiverPanel({ arrangementId, currentBalanceCents }) {
+  const [status, setStatus] = useState<'IDLE' | 'SAVING' | 'CONFIRMED' | 'ERROR'>('IDLE');
+  const [confirmedArrangement, setConfirmedArrangement] = useState(null);
+
+  // 1. EVENT HANDLER: Transactional Intent
+  const handleApplyDiscount = async (discountPercent: number) => {
+    setStatus('SAVING');
+
+    try {
+      // Transactional boundary: Authoritative financial state on server
+      const response = await fetch(`/api/arrangements/${arrangementId}/discount`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Idempotency-Key': `DISC-${arrangementId}-${Date.now()}`
+        },
+        body: JSON.stringify({ discountPercent })
+      });
+
+      if (!response.ok) throw new Error('Waiver rejected by compliance rules');
+
+      const data = await response.json();
+
+      // State update triggers Render -> Commit -> Paint
+      setConfirmedArrangement(data);
+      setStatus('CONFIRMED');
+    } catch (err) {
+      setStatus('ERROR');
+    }
+  };
+
+  // 2. PASSIVE EFFECT: Telemetry (Runs post-paint, never blocks UI)
+  useEffect(() => {
+    if (status === 'CONFIRMED') {
+      telemetryClient.log('DISCOUNT_APPLIED', { arrangementId });
+    }
+  }, [status, arrangementId]);
+
+  // 3. RENDER: Pure UI description
+  return (
+    <div>
+      <button 
+        onClick={() => handleApplyDiscount(20)} 
+        disabled={status === 'SAVING'}
+      >
+        {status === 'SAVING' ? 'Applying Waiver...' : 'Apply 20% Discount'}
+      </button>
+
+      {status === 'CONFIRMED' && (
+        <div role="status">New Balance: R{confirmedArrangement.newBalanceCents / 100}</div>
+      )}
+    </div>
+  );
+}
+```
+
+> **The Architectural Rule**:
+> **“UX responsiveness must never compromise transactional truth. User actions belong in event handlers; pure UI belongs in Render; layout measurements belong in `useLayoutEffect`; external synchronization belongs in `useEffect`.”**
