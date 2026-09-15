@@ -128,3 +128,138 @@ The W3C First Rule of ARIA states:
 > *'If you can use a native HTML5 element or attribute with the semantics and behavior already built in, do so instead of re-purposing an element and adding ARIA.'*
 
 Writing 30 lines of JavaScript to imperfectly emulate keyboard listeners, focus styling, scroll-prevention, and form binding that the browser gives you in a single `<button>` tag is an anti-pattern that increases bundle size and introduces avoidable compliance liability."*
+
+---
+
+## Q1.3: Accessible Forms, Validation & Error Architecture
+
+### Question
+> *"In a debt repayment portal, an agent completes: Monthly instalment amount, First debit date, and Bank account number. The server returns 422 Unprocessable Entity with 3 validation errors. How would you architect this React form so keyboard and screen-reader users immediately understand submission failed, know what needs fixing, and are not disoriented?"*
+
+### Verified Candidate Answer
+
+#### 1. Semantic Field Structure & Programmatic Association
+An accessible form requires **unambiguous, programmatic binding** between labels, inputs, help text, and error messages. Visual proximity alone is meaningless to assistive technology.
+
+Each field is architected as an atomic, accessible unit:
+
+```tsx
+<div className="form-group">
+  {/* 1. Explicit Label Binding */}
+  <label htmlFor="monthly-amount" className="font-semibold text-sm">
+    Monthly Instalment Amount (ZAR)
+    <span aria-hidden="true" className="text-rose-500 ml-1">*</span>
+    <span className="sr-only">(required)</span>
+  </label>
+
+  {/* 2. Format / Constraint Hint */}
+  <p id="monthly-amount-hint" className="text-xs text-slate-400">
+    Minimum R250, maximum permitted limit R5,000.
+  </p>
+
+  {/* 3. Input with Programmatic Attributes */}
+  <input
+    id="monthly-amount"
+    name="monthlyAmount"
+    type="text"
+    inputMode="decimal"
+    autoComplete="off"
+    required
+    aria-invalid={errors.monthlyAmount ? "true" : "false"}
+    aria-describedby={
+      errors.monthlyAmount 
+        ? "monthly-amount-error monthly-amount-hint" 
+        : "monthly-amount-hint"
+    }
+    value={formValues.monthlyAmount}
+    onChange={handleChange}
+    className={errors.monthlyAmount ? "border-rose-500 focus:ring-rose-500" : ""}
+  />
+
+  {/* 4. Programmatically Linked Error Text */}
+  {errors.monthlyAmount && (
+    <p id="monthly-amount-error" className="text-xs text-rose-400 font-medium flex items-center gap-1" role="alert">
+      <span aria-hidden="true">⚠️</span>
+      {errors.monthlyAmount}
+    </p>
+  )}
+</div>
+```
+
+* **What the Screen Reader Announces on Focus**:
+  Because of `aria-describedby="monthly-amount-error monthly-amount-hint"` and `aria-invalid="true"`, when the agent tabs to this field, the screen reader announces:
+  > *"Monthly Instalment Amount (ZAR), required, invalid entry, edit text, R8500, Amount exceeds the permitted arrangement limit, Minimum R250, maximum permitted limit R5,000."*
+  All context—label, value, invalid status, error message, and constraint format—is communicated in a single unified announcement.
+
+---
+
+#### 2. What Happens After Submit? (The Error Announcement Strategy)
+
+When server validation fails with 3 errors, an engineer must choose the focus and announcement pattern intentionally:
+
+```text
+[ Server returns 422 with 3 errors ]
+                 │
+                 ▼
+1. Preserve All Entered Values (Never wipe the form!)
+                 │
+                 ▼
+2. Render Form-Level Error Summary at the top of the form:
+   <div role="alert" tabIndex={-1} ref={errorSummaryRef}>
+     <h3>There are 3 errors in your payment arrangement:</h3>
+     <ul>
+       <li><a href="#monthly-amount">Monthly amount exceeds permitted limit</a></li>
+       <li><a href="#first-debit-date">Date must be at least 3 business days from today</a></li>
+       <li><a href="#bank-account">Account number could not be verified</a></li>
+     </ul>
+   </div>
+                 │
+                 ▼
+3. Programmatically Move Focus to the Error Summary (NOT the first input)
+```
+
+#### Why Focus the Error Summary Instead of the First Invalid Field?
+1. **Total Orientation**: If you jump focus directly to the first input field, a screen-reader user hears only that single field's error. They have no idea that two other fields below it also failed until they tab through the entire form again.
+2. **Actionable Navigation**: The error summary contains anchor links (`<a href="#monthly-amount">`) to each invalid field. The agent hears: *"3 errors found"*, understands the scope of the problem, and can press `Enter` on any link to jump directly to that specific field.
+3. **WCAG Compliance (SC 3.3.1 Error Identification & SC 3.3.3 Error Suggestion)**.
+
+---
+
+#### 3. Client vs. Server Validation: The Principle of Transactional Truth
+* **Client-Side Validation (Instant UX Guidance)**:
+  Runs on `blur` or debounced input to catch obvious formatting issues (non-numeric input, negative amounts). It prevents wasted round-trips and provides instant visual guidance.
+* **Server-Side Validation (Transactional Authority)**:
+  The browser client is an untrusted environment. Real business constraints—such as credit bureau score checks, bank branch clearing codes, and dynamic debt restructuring thresholds—**only exist authoritatively on the server**.
+* Client validation improves responsiveness; **server validation guarantees transactional integrity**.
+
+---
+
+### The Hostile Curveball Defense
+
+> **Interviewer**: *"You said you automatically focus the first invalid field (or error summary) after a failed submission. Imagine a screen-reader user is halfway through correcting the second field, and an asynchronous background validation response arrives. Your focus suddenly jumps back to the top summary or first field. What went wrong, and how do you prevent that?"*
+
+### Candidate Defense
+*"What went wrong is an **asynchronous race condition and uncoordinated focus hijacking**:
+* An asynchronous validation request was dispatched on an earlier event.
+* While the promise was in flight across the network, the user exercised agency and actively moved their focus to another field to begin typing.
+* When the delayed promise finally resolved, a naive `useEffect` saw `errors` exist and blindly executed `errorRef.current.focus()`, forcibly ripping focus out of the user's active input.
+
+#### How to Prevent Focus Hijacking (3 Strict Rules):
+
+1. **Focus Shifts MUST Only Occur on Explicit User Submission (Not Passive Validation)**:
+   - Programmatic focus shifting to an error summary should **only ever trigger in response to an explicit form submission action (`onSubmit`)**, never inside a passive, background, or debounced `onChange` / `onBlur` effect.
+2. **Active Element Protection (Never Steal Active Focus)**:
+   - Before moving focus programmatically, check if the user is already interacting inside the form:
+   ```typescript
+   // Only shift focus if the user hasn't already focused an input inside the form
+   const isUserAlreadyTypingInForm = formRef.current?.contains(document.activeElement);
+   if (!isUserAlreadyTypingInForm) {
+       errorSummaryRef.current?.focus();
+   }
+   ```
+3. **Epoch / Submit-Counter Guard**:
+   - Each submission increment a submit counter (`submitEpochRef.current += 1`).
+   - The async handler checks:
+     `if (response.epoch !== submitEpochRef.current) return;`
+   - If a newer submission or user action occurred while the async call was in flight, the stale response is discarded and cannot manipulate DOM focus."*
+
