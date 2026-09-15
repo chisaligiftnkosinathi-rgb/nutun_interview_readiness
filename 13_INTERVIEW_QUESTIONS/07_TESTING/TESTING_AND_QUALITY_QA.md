@@ -511,3 +511,268 @@ test('renders interactive policy citations as tokens arrive', async () => {
 2. **Test the streaming state machine in isolation**: Verify transitions (`IDLE` $\to$ `CONNECTING` $\to$ `STREAMING` $\to$ `COMPLETED` / `ERRORED` / `ABORTED`) via pure reducer unit tests.
 3. **Assert accessibility contracts**: Verify `aria-live="polite"` handles text updates and keyboard focus is never stolen during active streaming.
 4. **Assert cancellation semantics**: Guarantee that unmounting the component or clicking "Cancel" dispatches `AbortController.abort()` to the network layer.
+
+---
+
+## Q11.5: Async Race Conditions, Debouncing & Request Identity in Search
+
+### Scenario — Nutun Debtor Workspace Search
+An agent on an active call types into the global customer lookup input:
+```text
+"John"
+"John S"
+"John Sm"
+"John Smith"
+```
+The application debounces search keystrokes by 250ms.
+On a volatile network or congested API gateway:
+* Request A: `John` (Takes 900ms to resolve)
+* Request B: `John S` (Takes 600ms to resolve)
+* Request C: `John Smith` (Takes 200ms to resolve)
+
+Because Request C is lightweight or hits a warm database cache, responses arrive out of order:
+```text
+Order of Arrival: C (200ms) ──► B (600ms) ──► A (900ms)
+```
+If unhandled, Request A’s slow response will resolve last and overwrite Customer C’s authoritative search results. In Nutun’s debt collection environment, this creates a catastrophic **POPIA regulatory violation**: an agent opens and reviews Customer A’s banking and debt profile while on the phone with Customer C.
+
+### Interview Question
+> *"How would you architect and test this search so that out-of-order responses cannot overwrite the current results? Explain debouncing vs cancellation, `AbortController` lifecycles, request identity, and how you prove deterministic immunity with automated tests."*
+
+---
+
+### Verified Candidate Answer
+
+#### 1. Debouncing vs. Cancellation: Distinct Solutions to Distinct Problems
+Candidates frequently conflate debouncing and network cancellation. They solve fundamentally different problems:
+
+```text
+Keystroke 'J' ──► 'o' ──► 'h' ──► 'n' (User typing rapidly)
+  │
+  ▼
+[ 1. DEBOUNCING (Rate Limiter / Traffic Shaper) ]
+  • Delays firing until user pauses for 250ms.
+  • Problem Solved: Inbound request explosion (prevents firing 10 HTTP requests for 10 keystrokes).
+  • What It Does NOT Solve: Network race conditions. If 2 requests DO fire, debouncing does nothing to prevent the first from resolving after the second!
+  │
+  ▼
+[ 2. CANCELLATION (Transport Optimization) ]
+  • Calls `abortController.abort()` to sever the socket/stream.
+  • Problem Solved: Client socket exhaustion, unnecessary server compute, bandwidth waste.
+  • What It Does NOT Solve: Race conditions where the response is already in the OS TCP buffer or parsed microtasks.
+  │
+  ▼
+[ 3. REQUEST IDENTITY / EPOCH TRACKING (Correctness & Transactional Truth) ]
+  • Associates every state dispatch with a strictly incrementing generation ID or query token.
+  • Problem Solved: Correctness. Guarantees that only the authoritative request can commit state to the DOM.
+```
+
+The governing architectural rule:
+> **"Cancellation improves network efficiency; Request Identity establishes correctness."**
+
+---
+
+#### 2. Why Cancellation Alone is Insufficient (The Race Window)
+Relying solely on `abort()` leaves a fatal race condition window:
+1. The client sends Request A.
+2. Request A reaches the server, executes, and the server sends the HTTP response.
+3. The response packets arrive at the client's network interface and enter the browser's TCP/HTTP buffer.
+4. The user types a new character; the client invokes `abortController.abort()`.
+5. If the browser's networking stack has already handed the response payload to the JavaScript event loop microtask queue before the abort signal was processed, the promise resolution callback **will still execute**.
+6. Without request identity, `setResults(responseA)` commits stale data into the UI!
+
+---
+
+#### 3. The Production Architecture: Dual-Layer Defense (Abort + Epoch Identity)
+
+```typescript
+import { useState, useRef, useEffect, useCallback } from 'react';
+
+interface DebtorSearchResult {
+  debtorId: string;
+  fullName: string;
+  idNumberMasked: string;
+  totalArrearsCents: number;
+}
+
+export function useDebtorSearch(query: string, debounceMs = 250) {
+  const [results, setResults] = useState<DebtorSearchResult[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Epoch / Request Generation Identity Tracker
+  const currentRequestIdRef = useRef<number>(0);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    const trimmedQuery = query.trim();
+
+    // 1. Handle empty input immediately: Clear results and cancel pending requests
+    if (!trimmedQuery) {
+      currentRequestIdRef.current += 1; // Invalidate any pending in-flight requests
+      abortControllerRef.current?.abort();
+      setResults([]);
+      setIsLoading(false);
+      setError(null);
+      return;
+    }
+
+    // 2. Debounce timer
+    const timerId = setTimeout(async () => {
+      // Increment request identity epoch
+      const thisRequestId = ++currentRequestIdRef.current;
+
+      // Abort previous network request if still open
+      abortControllerRef.current?.abort();
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const response = await fetch(`/api/debtors/search?q=${encodeURIComponent(trimmedQuery)}`, {
+          signal: controller.signal,
+          headers: { 'Accept': 'application/json' }
+        });
+
+        if (!response.ok) {
+          throw new Error(`Search failed with HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        // 3. CORRECTNESS GUARD: Commit to state ONLY if this request is still authoritative
+        if (thisRequestId === currentRequestIdRef.current) {
+          setResults(data.debtors);
+          setIsLoading(false);
+        }
+      } catch (err: unknown) {
+        // Ignore aborted requests (they are intentional cancellations)
+        if (err instanceof DOMException && err.name === 'AbortError') {
+          return;
+        }
+
+        // Commit error state ONLY if this request is still authoritative
+        if (thisRequestId === currentRequestIdRef.current) {
+          setError(err instanceof Error ? err.message : 'Network error during search');
+          setIsLoading(false);
+        }
+      }
+    }, debounceMs);
+
+    return () => {
+      clearTimeout(timerId);
+    };
+  }, [query, debounceMs]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+    };
+  }, []);
+
+  return { results, isLoading, error };
+}
+```
+
+---
+
+#### 4. Managing Stale Loading & Error States
+A common junior bug is that when Request C arrives, the UI correctly displays C's results—but then Request A fails with a 500 error 700ms later, wiping C's results and showing an error banner!
+* In our architecture, **all state setters** (`setResults`, `setIsLoading`, `setError`) are guarded by `if (thisRequestId === currentRequestIdRef.current)`.
+* If Request A errors after Request C has settled, Request A's catch block evaluates `thisRequestId (1) === currentRequestIdRef.current (3)` $\to$ `false`, silently dropping the stale error.
+
+---
+
+### The Hostile Curveball Defense
+
+#### Curveball 1:
+> **Interviewer**: *"You call `abort()` on Request A before starting Request B. Isn't that enough? Why do you need a request ID?"*
+
+#### Candidate Defense:
+*"Calling `abort()` is essential for network hygiene, but it is **not sufficient for transactional correctness**:
+1. **The In-Flight Completion Race**: If Request A’s response headers and body arrived at the client TCP buffer a split-second before `abort()` was called, the fetch promise is already queued for fulfillment in the JavaScript microtask queue. Calling `abort()` after that threshold does not prevent the `.then()` or code after `await` from executing.
+2. **External Caching & Service Workers**: If requests hit a local browser cache, service worker, or memory cache, the response can resolve synchronously or quasi-synchronously.
+3. **The Guarantee**: A monotonically increasing `requestId` or query token ensures that even if an aborted or zombie promise executes its resolution handler, it evaluates `requestId !== currentRequestId` and commits zero mutations to the DOM."*
+
+---
+
+#### Curveball 2:
+> **Interviewer**: *"What if Request A already completed on the server before the browser called `abort()`?"*
+
+#### Candidate Defense:
+*"That is precisely why `abort()` alone cannot be our correctness boundary. Once the server finishes processing and sends HTTP packets back across the wire, the server's work is done. The packets hit the client. 
+
+If the user typed 'John Smith' while those packets were in transit, our front-end client-side request identity check (`thisRequestId === currentRequestIdRef.current`) evaluates to `1 === 3` (false). The response payload from Request A is discarded instantly without touching component state, without triggering a re-render, and without exposing Customer A's data."*
+
+---
+
+#### Curveball 3:
+> **Interviewer**: *"How would you prove with an automated test that stale Customer A results can never overwrite Customer B? Write the test."*
+
+#### Candidate Defense:
+*"We write a deterministic asynchronous race test using **Vitest** and **Mock Service Worker (MSW)**. We deliberately configure MSW so that Request A (`q=John`) takes 100ms, while Request B (`q=John Smith`) takes 10ms. We verify that Customer B renders and remains rendered even after Request A finishes:"*
+
+```typescript
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { server } from '../mocks/server';
+import { http, HttpResponse, delay } from 'msw';
+import { DebtorSearchWorkspace } from './DebtorSearchWorkspace';
+
+describe('Debtor Search Race Condition & Epoch Immunity', () => {
+  test('guarantees slow earlier request (Customer A) never overwrites faster later request (Customer B)', async () => {
+    const user = userEvent.setup();
+
+    // Configure MSW to deliberately delay query "John" while accelerating "John Smith"
+    server.use(
+      http.get('/api/debtors/search', async ({ request }) => {
+        const url = new URL(request.url);
+        const query = url.searchParams.get('q');
+
+        if (query === 'John') {
+          // Slow response for Request A
+          await delay(200);
+          return HttpResponse.json({
+            debtors: [{ debtorId: 'DEBT-A', fullName: 'Johnathan Adams (Customer A)' }]
+          });
+        }
+
+        if (query === 'John Smith') {
+          // Fast response for Request B
+          await delay(20);
+          return HttpResponse.json({
+            debtors: [{ debtorId: 'DEBT-B', fullName: 'John Smith (Customer B)' }]
+          });
+        }
+
+        return HttpResponse.json({ debtors: [] });
+      })
+    );
+
+    render(<DebtorSearchWorkspace debounceMs={50} />);
+    const searchInput = screen.getByRole('searchbox', { name: /search debtors/i });
+
+    // 1. Agent types "John" (fires Request A, delayed by 200ms)
+    await user.type(searchInput, 'John');
+
+    // 2. Agent immediately finishes typing " Smith" before Request A returns
+    await user.type(searchInput, ' Smith');
+
+    // 3. Request B ("John Smith") returns in 20ms and renders Customer B
+    expect(await screen.findByText(/John Smith \(Customer B\)/i)).toBeInTheDocument();
+
+    // 4. Advance time / wait past 250ms so Request A's 200ms response completes
+    await new Promise((resolve) => setTimeout(resolve, 250));
+
+    // 5. ASSERTION OF CORRECTNESS: Customer A must NEVER have overwritten Customer B!
+    expect(screen.getByText(/John Smith \(Customer B\)/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Johnathan Adams \(Customer A\)/i)).not.toBeInTheDocument();
+    
+    // 6. Loading indicator must be completely cleared
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+});
+```
