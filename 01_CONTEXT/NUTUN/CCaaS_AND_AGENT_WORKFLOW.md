@@ -41,9 +41,18 @@ When an outbound predictive dialler detects a live human voice (filtering out an
 
 ## 3. Front-End Architectural Requirements for CCaaS Workspaces
 
-### 1. Robust WebRTC Audio & Media State
-* The softphone must remain completely unblocked regardless of heavy data fetching or background re-renders.
-* **Architecture**: Audio streams run in dedicated Web Workers or isolated DOM wrappers to prevent audio stutter or dropped WebRTC packets during complex UI transitions.
+### 1. Robust WebRTC Audio & Media Pipeline Boundary
+* **The Browser vs. JavaScript Distinction**:
+  - The low-level WebRTC media pipeline—packet decoding, jitter buffering, acoustic echo cancellation (AEC), and OS hardware audio rendering—is managed by **internal browser C++ threads**, outside the JavaScript main thread.
+  - A heavy React task does not automatically corrupt OS audio buffers directly.
+  - However, long main-thread tasks (>50ms) choke **signaling event dispatching**, UI state synchronization, and user interaction (mute, hold, hang up). The agent experiences an unresponsive workstation while the call is live.
+* **Essential WebRTC Vocabulary**:
+  - `RTCPeerConnection`: Browser API representing the full peer-to-peer audio connection between the browser softphone and the Nutun telephony gateway/PBX.
+  - **Signaling**: The out-of-band mechanism (typically WebSockets or SIP-over-WebSocket) used to exchange connection metadata before media flows.
+  - **SDP (Session Description Protocol)**: Formatted metadata describing media codecs, encryption, and bandwidth parameters.
+  - **ICE / STUN / TURN**: Framework for establishing NAT traversal. STUN resolves public IP addresses; TURN acts as a fallback relay server if enterprise firewalls block direct UDP media traffic.
+  - **MediaStream & MediaStreamTrack**: The browser representations of audio inputs/outputs.
+  - **AudioWorklet**: Modern Web Audio API for custom audio processing off the main thread.
 
 ### 2. Multi-Tab / Multi-Pane Agent Desktop
 Agents simultaneously reference:
