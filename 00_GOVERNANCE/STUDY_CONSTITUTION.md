@@ -20,13 +20,20 @@ How does that matter to Nutun?
 
 ---
 
-## 2. The Three Knowledge Categories
+## 2. The Four Competency Status Levels
 
-* 🟢 **I KNOW**: Direct, verifiable evidence from production code, monorepos, or hands-on implementations in `C:\Projects`.
-* 🟡 **I UNDERSTAND**: Technically sound architectural understanding, but not personally implemented in production yet.
-* 🔴 **I DON'T KNOW YET**: Identified gaps that we must study, test, or build.
+* 🔴 **NOT YET**: Material has not been adequately learned, verified, or demonstrated.
+* 🟡 **UNDERSTAND**: The candidate can explain the concept theoretically, but lacks sufficient implementation, debugging, codebase evidence, or defense depth under follow-up questioning.
+* 🟢 **KNOW**: The candidate can explain the mechanical reality, connect it to verified codebase evidence in `C:\Projects`, and answer standard engineering interview questions.
+* 🛡️ **INTERVIEW READY**: The candidate has passed the defined, observable **exit test**—including rapid-fire questions, technical follow-up traps, and timed verbal responses under pressure without looking at notes.
 
-> **Rule**: We never inflate 🟡 or 🔴 into 🟢. Honest engineering communication wins credibility; bluffing destroys it.
+> **Absolute Rule**: A well-written lesson or accurate answer document alone must **NEVER** promote a competency to 🛡️ INTERVIEW READY. The status requires an actual demonstrated exit test.
+> **Evidence Classification**:
+> * `DOCUMENTED` — Explicitly cited in external/internal specs.
+> * `OBSERVED` — Directly verified in existing codebase files.
+> * `INFERRED` — Reasonable technical deduction, explicitly labeled.
+> * `SIMULATION` — Interview preparation code only; never represented as Nutun internal architecture.
+> * `UNKNOWN` — Not yet verified.
 
 ---
 
