@@ -3,590 +3,532 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Nutun Front-End Engineer — Interview Arena</title>
+  <title>Nutun Front-End Engineer — Learning & Interview Engine</title>
   <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
   <style>
-    @keyframes pulse-fast {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.4; }
-    }
-    .urgent-timer {
-      animation: pulse-fast 1s infinite;
-    }
+    @keyframes pulse-fast { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    .urgent-timer { animation: pulse-fast 1s infinite; }
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans selection:bg-cyan-500 selection:text-black">
 
-  <!-- Top Header Navigation & Status -->
-  <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur px-6 py-4 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-50">
+  <!-- Global Header & Stage Navigation -->
+  <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur px-6 py-4 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-50">
     <div class="flex items-center space-x-3">
-      <div class="w-8 h-8 rounded bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center font-black text-black text-lg tracking-tighter">
+      <div class="w-9 h-9 rounded-lg bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center font-black text-black text-xl tracking-tighter shadow-lg shadow-cyan-500/20">
         N
       </div>
       <div>
-        <h1 class="text-sm font-bold tracking-wide uppercase text-slate-200">
-          Nutun Interview Arena <span class="text-xs text-cyan-400 font-normal px-2 py-0.5 rounded border border-cyan-800 bg-cyan-950/40">SIMULATION</span>
-        </h1>
-        <p class="text-xs text-slate-400">Target Role: Front-End Engineer (Nutun RSA / OfferZen)</p>
+        <div class="flex items-center gap-2">
+          <h1 class="text-sm font-bold tracking-wide uppercase text-slate-100">
+            Nutun Learning & Interview Engine
+          </h1>
+          <span class="text-[10px] text-cyan-400 font-mono px-2 py-0.5 rounded border border-cyan-800 bg-cyan-950/40">SIMULATION MVP</span>
+        </div>
+        <p class="text-xs text-slate-400">Target Role: Front-End Engineer | Module: Web Request Lifecycle</p>
       </div>
     </div>
 
-    <!-- Stats Tracker -->
-    <div class="flex items-center space-x-6 text-xs">
+    <!-- Mode Selector Tabs (Learn -> Checkpoint -> Interview) -->
+    <nav class="flex items-center bg-slate-950 border border-slate-800 p-1 rounded-xl text-xs font-semibold" aria-label="Learning Progression Tabs">
+      <button id="tab-learn" class="px-4 py-1.5 rounded-lg bg-cyan-600 text-black font-bold transition">
+        1. Study Lesson
+      </button>
+      <button id="tab-checkpoint" class="px-4 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 transition">
+        2. AI Tutor Checkpoint
+      </button>
+      <button id="tab-interview" class="px-4 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 transition">
+        3. Timed Interview Defense
+      </button>
+    </nav>
+
+    <!-- Global Progress Metrics -->
+    <div class="flex items-center space-x-5 text-xs font-mono">
       <div>
-        <span class="text-slate-400">Competency:</span>
-        <span class="font-semibold text-slate-200 ml-1">Req #1: High-Performance React</span>
+        <span class="text-slate-500">XP:</span>
+        <span id="global-xp" class="font-bold text-cyan-400 ml-1">0 / 200 XP</span>
       </div>
       <div class="h-4 w-px bg-slate-800"></div>
       <div>
-        <span class="text-slate-400">Total Score:</span>
-        <span id="total-score" class="font-bold text-cyan-400 ml-1">0 / 400 XP</span>
-      </div>
-      <div class="h-4 w-px bg-slate-800"></div>
-      <div>
-        <span class="text-slate-400">Exit Test Status:</span>
-        <span id="exit-badge" class="font-semibold text-amber-400 ml-1">🟡 In Progress</span>
+        <span class="text-slate-500">Status:</span>
+        <span id="global-status" class="font-bold text-amber-400 ml-1">🟡 STUDYING</span>
       </div>
     </div>
   </header>
 
-  <!-- Main Arena Body -->
-  <main class="flex-1 max-w-5xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <!-- Main Dynamic Viewport Container -->
+  <main class="flex-1 max-w-5xl w-full mx-auto p-4 md:p-6 flex flex-col gap-6">
 
-    <!-- Left Column: Arena Question & Answering Portal -->
-    <div class="lg:col-span-2 flex flex-col gap-5">
-
-      <!-- Question Card -->
-      <section class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl relative overflow-hidden">
-        <div class="flex items-center justify-between mb-4">
-          <div class="flex items-center space-x-2">
-            <span id="question-index-badge" class="px-2.5 py-1 text-xs font-bold rounded-full bg-blue-950 text-blue-400 border border-blue-800">
-              Question 1 of 4
-            </span>
-            <span class="text-xs text-slate-400 uppercase tracking-wider font-semibold">
-              Rapid-Fire Technical Screen
-            </span>
-          </div>
-
-          <!-- Timer Element -->
-          <div id="timer-box" class="flex items-center space-x-2 bg-slate-950 border border-slate-800 px-3 py-1 rounded-lg text-sm font-mono">
-            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-            <span id="timer-display" class="font-bold text-cyan-400">60s</span>
-          </div>
-        </div>
-
-        <h2 id="question-title" class="text-lg md:text-xl font-semibold text-slate-100 leading-snug mb-3">
-          Loading Question...
-        </h2>
-        
-        <div class="text-xs text-slate-400 bg-slate-950/60 p-3 rounded-lg border border-slate-800/80 mb-2 font-mono flex items-start gap-2">
-          <span class="text-cyan-400 font-bold">Nutun Context:</span>
-          <span id="question-context">...</span>
-        </div>
-      </section>
-
-      <!-- Answer Input Terminal -->
-      <section class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl flex-1 flex flex-col">
-        <div class="flex items-center justify-between mb-3">
-          <label for="answer-input" class="text-xs font-semibold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-            <span>Candidate Verbal Answer (Deliver in 60–90 Seconds)</span>
-          </label>
-          <span id="char-count" class="text-xs text-slate-500 font-mono">0 words</span>
-        </div>
-
-        <div class="relative flex-1">
-          <textarea
-            id="answer-input"
-            rows="7"
-            class="w-full h-full bg-slate-950 border border-slate-800 rounded-lg p-4 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 font-sans leading-relaxed resize-none"
-            placeholder="Type your technical answer here as you would speak it in the interview. Focus on underlying mechanisms, re-render triggers, and real trade-offs..."
-          ></textarea>
-        </div>
-
-        <!-- Controls -->
-        <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+    <!-- ========================================== -->
+    <!-- STAGE 1: STUDY LESSON VIEW                 -->
+    <!-- ========================================== -->
+    <section id="view-learn" class="flex flex-col gap-6">
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
           <div class="flex items-center gap-2">
-            <button
-              id="hint-btn"
-              class="text-xs px-3 py-2 rounded-lg border border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white transition flex items-center gap-1.5"
-            >
-              💡 Show Mechanism Hint
-            </button>
-            <button
-              id="reset-timer-btn"
-              class="text-xs px-3 py-2 rounded-lg border border-slate-800 bg-slate-950 text-slate-400 hover:text-slate-200 transition"
-            >
-              Reset Clock
-            </button>
+            <span class="text-xs px-2.5 py-0.5 rounded bg-blue-950 text-blue-400 border border-blue-800 font-mono font-bold">
+              FOUNDATION LESSON 01
+            </span>
+            <h2 class="text-base font-bold text-slate-100">The Anatomy of a Web Request</h2>
+          </div>
+          <span class="text-xs text-slate-400 font-mono">Governing Question: portal.nutun.com</span>
+        </div>
+
+        <p class="text-sm text-slate-300 leading-relaxed mb-6">
+          When an agent opens a case file or an automated AI webhook triggers in Nutun's portal, the browser executes an intricate, distributed pipeline before a single component can render. Mastering this sequence prevents production misdiagnoses when APIs appear slow.
+        </p>
+
+        <!-- Pipeline Sequence Flowchart -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6 text-xs font-mono">
+          <div class="p-3 rounded-lg bg-slate-950 border border-slate-800 flex flex-col justify-between">
+            <div class="text-cyan-400 font-bold mb-1">1. URL & DNS</div>
+            <p class="text-slate-400 font-sans text-[11px]">Browser checks cache, OS resolver queries DNS to map hostname to an IP address.</p>
+          </div>
+          <div class="p-3 rounded-lg bg-slate-950 border border-slate-800 flex flex-col justify-between">
+            <div class="text-blue-400 font-bold mb-1">2. TCP & TLS 1.3</div>
+            <p class="text-slate-400 font-sans text-[11px]">3-way TCP handshake establishes byte stream; TLS 1.3 completes secure cryptographic keys.</p>
+          </div>
+          <div class="p-3 rounded-lg bg-slate-950 border border-slate-800 flex flex-col justify-between">
+            <div class="text-indigo-400 font-bold mb-1">3. HTTP & TTFB</div>
+            <p class="text-slate-400 font-sans text-[11px]">Client sends HTTP GET/POST with headers; waits for first byte of response stream (TTFB).</p>
+          </div>
+          <div class="p-3 rounded-lg bg-slate-950 border border-slate-800 flex flex-col justify-between">
+            <div class="text-emerald-400 font-bold mb-1">4. Critical Path</div>
+            <p class="text-slate-400 font-sans text-[11px]">HTML tokenized into DOM; CSSOM parsed (render-blocking); Layout and Paint occur.</p>
+          </div>
+        </div>
+
+        <!-- Deep-Dive Breakdown Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          <div class="p-4 rounded-lg bg-slate-950/80 border border-slate-800">
+            <h3 class="font-bold text-slate-200 mb-2 flex items-center gap-1.5">
+              <span>⚡ Why DNS & Connection Caching Matters</span>
+            </h3>
+            <p class="text-slate-400 leading-relaxed mb-2">
+              DNS resolution can take 50–200ms on a cold cache. Browsers cache DNS records based on the server's <strong>Time-to-Live (TTL)</strong>. TCP handshake takes 1 round-trip time (RTT); TLS 1.3 adds another 1 RTT.
+            </p>
+            <p class="text-slate-400 leading-relaxed">
+              With <code>HTTP/2</code> connection keep-alive or <code>HTTP/3 QUIC</code>, subsequent API calls to Nutun microservices reuse existing connections, bypassing connection latency entirely.
+            </p>
           </div>
 
-          <button
-            id="submit-btn"
-            class="px-6 py-2.5 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-bold text-sm tracking-wide transition shadow-lg shadow-cyan-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            <span>Submit to Technical Evaluator</span>
+          <div class="p-4 rounded-lg bg-slate-950/80 border border-slate-800">
+            <h3 class="font-bold text-slate-200 mb-2 flex items-center gap-1.5">
+              <span>🛑 Render-Blocking vs. Parser-Blocking</span>
+            </h3>
+            <p class="text-slate-400 leading-relaxed mb-2">
+              <strong>CSS is render-blocking</strong>: The browser refuses to render pixels until the CSSOM is constructed to avoid Flash of Unstyled Content (FOUC).
+            </p>
+            <p class="text-slate-400 leading-relaxed">
+              <strong>Synchronous JS is parser-blocking</strong>: When the HTML parser sees a traditional <code>&lt;script&gt;</code>, it stops building the DOM until the script downloads and executes. Use <code>defer</code> or <code>type="module"</code> to keep parsing non-blocking.
+            </p>
+          </div>
+        </div>
+
+        <!-- Advance Button -->
+        <div class="mt-6 pt-4 border-t border-slate-800 flex justify-end">
+          <button id="btn-goto-checkpoint" class="px-6 py-2.5 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-bold text-xs tracking-wide transition shadow-lg shadow-cyan-500/20 flex items-center gap-2">
+            <span>Proceed to AI Tutor Checkpoint</span>
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
             </svg>
           </button>
         </div>
+      </div>
+    </section>
 
-        <!-- Mechanism Hint (Collapsible) -->
-        <div id="hint-panel" class="hidden mt-4 p-3 rounded-lg bg-blue-950/30 border border-blue-900/60 text-xs text-blue-200 leading-relaxed">
-          <strong>Key Mental Model:</strong> <span id="hint-text">...</span>
-        </div>
-      </section>
 
-    </div>
-
-    <!-- Right Column: Real-Time Evaluator & Follow-Up Defense -->
-    <div class="flex flex-col gap-5">
-
-      <!-- Evaluator Scoring Card -->
-      <section class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-xl flex flex-col">
-        <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
-          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
-            AI Evaluator Feedback
-          </h3>
-          <span id="evaluation-status-pill" class="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-400">
-            Awaiting Submission
-          </span>
+    <!-- ========================================== -->
+    <!-- STAGE 2: AI TUTOR CHECKPOINT VIEW          -->
+    <!-- ========================================== -->
+    <section id="view-checkpoint" class="hidden flex flex-col gap-6">
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl flex flex-col gap-5">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div class="flex items-center gap-2">
+            <span class="text-xs px-2.5 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800 font-mono font-bold">
+              AI TUTOR CHECKPOINT
+            </span>
+            <h2 class="text-base font-bold text-slate-100">Verify Conceptual Sequence</h2>
+          </div>
+          <span class="text-xs text-slate-400">Untimed Pedagogical Check</span>
         </div>
 
-        <!-- Grade Summary -->
-        <div id="evaluation-placeholder" class="py-12 text-center text-slate-500 text-xs leading-relaxed">
-          Submit your answer to receive an instant evaluation, rubric scoring breakdown, precision corrections, and senior follow-up traps.
+        <!-- Prompt -->
+        <div class="p-4 rounded-lg bg-slate-950 border border-slate-800 text-xs leading-relaxed">
+          <p class="font-bold text-slate-200 mb-1">Pedagogical Question:</p>
+          <p class="text-slate-300 text-sm">
+            <em>"In your own words, what exact sequence of technical steps must occur before an HTTP request can reach the application server?"</em>
+          </p>
         </div>
 
-        <!-- Evaluation Results Container -->
-        <div id="evaluation-results" class="hidden flex flex-col gap-4">
-          
-          <!-- Score Banner -->
-          <div class="flex items-center justify-between p-3 rounded-lg bg-slate-950 border border-slate-800">
-            <div>
-              <div class="text-xs text-slate-400">Question Score</div>
-              <div id="eval-score" class="text-2xl font-black text-cyan-400">85 <span class="text-xs text-slate-500 font-normal">/ 100 XP</span></div>
-            </div>
-            <div id="eval-grade-badge" class="px-3 py-1 rounded text-xs font-bold bg-green-950 text-green-400 border border-green-800">
-              🟢 STRONG DEFENSE
-            </div>
-          </div>
-
-          <!-- Evaluation Rubric Breakdown -->
-          <div class="space-y-2 text-xs">
-            <div>
-              <div class="flex justify-between text-slate-400 mb-1">
-                <span>Technical Accuracy & Mechanism:</span>
-                <span id="rubric-accuracy" class="font-mono text-slate-200">22 / 25</span>
-              </div>
-              <div class="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden">
-                <div id="bar-accuracy" class="bg-cyan-500 h-full rounded-full" style="width: 88%"></div>
-              </div>
-            </div>
-
-            <div>
-              <div class="flex justify-between text-slate-400 mb-1">
-                <span>Job-Spec Terminology:</span>
-                <span id="rubric-terminology" class="font-mono text-slate-200">18 / 20</span>
-              </div>
-              <div class="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden">
-                <div id="bar-terminology" class="bg-blue-500 h-full rounded-full" style="width: 90%"></div>
-              </div>
-            </div>
-
-            <div>
-              <div class="flex justify-between text-slate-400 mb-1">
-                <span>Trade-Off & Edge Case Defense:</span>
-                <span id="rubric-tradeoffs" class="font-mono text-slate-200">16 / 20</span>
-              </div>
-              <div class="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden">
-                <div id="bar-tradeoffs" class="bg-indigo-500 h-full rounded-full" style="width: 80%"></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Precision Correction Alert -->
-          <div id="eval-correction-card" class="p-3.5 rounded-lg bg-amber-950/40 border border-amber-800 text-xs">
-            <div class="font-bold text-amber-300 mb-1 flex items-center gap-1.5">
-              <span>⚠️ Precision Correction</span>
-            </div>
-            <p id="eval-correction-text" class="text-amber-100/90 leading-relaxed">
-              ...
-            </p>
-          </div>
-
-          <!-- Hostile Follow-Up Trap -->
-          <div id="eval-followup-card" class="p-3.5 rounded-lg bg-red-950/30 border border-red-800 text-xs">
-            <div class="font-bold text-red-300 mb-1 flex items-center gap-1.5">
-              <span>👹 Senior Interviewer Follow-Up:</span>
-            </div>
-            <p id="eval-followup-text" class="text-red-100/90 italic leading-relaxed">
-              ...
-            </p>
-          </div>
-
-          <!-- Action Buttons -->
-          <div class="flex items-center gap-2 pt-2">
-            <button
-              id="retry-btn"
-              class="w-1/2 py-2 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 transition"
-            >
-              🔄 Retry Answer
-            </button>
-            <button
-              id="next-btn"
-              class="w-1/2 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-xs font-bold text-black transition"
-            >
-              Next Question ➔
+        <!-- Input Area -->
+        <div class="flex flex-col gap-2">
+          <textarea
+            id="checkpoint-input"
+            rows="5"
+            class="w-full bg-slate-950 border border-slate-800 rounded-lg p-4 text-xs md:text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 font-sans leading-relaxed resize-none"
+            placeholder="Describe the steps: URL parsing, DNS lookup, TCP handshake, TLS 1.3 handshake, HTTP dispatch..."
+          ></textarea>
+          <div class="flex justify-between items-center text-xs text-slate-500 font-mono">
+            <span id="checkpoint-wordcount">0 words</span>
+            <button id="btn-checkpoint-submit" class="px-5 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-black font-bold transition">
+              Submit to AI Tutor
             </button>
           </div>
-
         </div>
-      </section>
 
-      <!-- Arena Status & Gap Checklist -->
-      <section class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-xl">
-        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
-          Requirement #1 Exit Test Checklist
-        </h4>
-        <ul class="space-y-2 text-xs">
-          <li id="check-1" class="flex items-center gap-2 text-slate-400">
-            <span class="w-4 h-4 rounded-full border border-slate-700 flex items-center justify-center text-[10px]">1</span>
-            <span>Re-Render Triggers & The Props Myth</span>
-          </li>
-          <li id="check-2" class="flex items-center gap-2 text-slate-400">
-            <span class="w-4 h-4 rounded-full border border-slate-700 flex items-center justify-center text-[10px]">2</span>
-            <span>React.memo Failure Modes & References</span>
-          </li>
-          <li id="check-3" class="flex items-center gap-2 text-slate-400">
-            <span class="w-4 h-4 rounded-full border border-slate-700 flex items-center justify-center text-[10px]">3</span>
-            <span>5,000 Debtor Rows & Virtualization</span>
-          </li>
-          <li id="check-4" class="flex items-center gap-2 text-slate-400">
-            <span class="w-4 h-4 rounded-full border border-slate-700 flex items-center justify-center text-[10px]">4</span>
-            <span>Composition (children) vs useMemo</span>
-          </li>
-        </ul>
-      </section>
+        <!-- AI Tutor Pedagogical Feedback -->
+        <div id="checkpoint-feedback" class="hidden p-4 rounded-lg bg-slate-950 border border-slate-800 flex flex-col gap-3 text-xs">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-cyan-400 flex items-center gap-1.5">
+              <span>🤖 AI Tutor Sequence Analysis</span>
+            </span>
+            <span id="checkpoint-status-pill" class="px-2 py-0.5 rounded text-[11px] font-bold">...</span>
+          </div>
 
-    </div>
+          <p id="checkpoint-correction-text" class="text-slate-300 leading-relaxed">
+            ...
+          </p>
+
+          <!-- Follow-up pedagogical challenge -->
+          <div id="checkpoint-challenge-box" class="p-3 rounded bg-blue-950/40 border border-blue-900/60 text-blue-200">
+            <strong>Deepening Challenge:</strong> <span id="checkpoint-challenge-text">...</span>
+          </div>
+
+          <div class="flex justify-end pt-2">
+            <button id="btn-goto-interview" class="px-5 py-2 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 text-black font-bold transition">
+              Advance to Timed Interview Defense ➔
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ========================================== -->
+    <!-- STAGE 3: TIMED INTERVIEW DEFENSE VIEW      -->
+    <!-- ========================================== -->
+    <section id="view-interview" class="hidden flex flex-col lg:grid lg:grid-cols-3 gap-6">
+
+      <!-- Left Column: Interview Prompt & Recording Terminal -->
+      <div class="lg:col-span-2 flex flex-col gap-5">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl relative overflow-hidden">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center space-x-2">
+              <span class="px-2.5 py-1 text-xs font-bold rounded-full bg-red-950 text-red-400 border border-red-800">
+                OFFICIAL INTERVIEW ROUND
+              </span>
+              <span class="text-xs text-slate-400 uppercase tracking-wider font-semibold">
+                Nutun Technical Evaluation
+              </span>
+            </div>
+
+            <!-- Pressure Timer -->
+            <div id="interview-timer-box" class="flex items-center space-x-2 bg-slate-950 border border-slate-800 px-3 py-1 rounded-lg text-sm font-mono">
+              <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              <span id="interview-timer-display" class="font-bold text-cyan-400">60s</span>
+            </div>
+          </div>
+
+          <h2 class="text-base md:text-lg font-bold text-slate-100 leading-snug mb-3">
+            "Gift, explain TTFB (Time to First Byte) to me: what components make up that number, and how do you determine whether a 2-second TTFB is caused by the client's network, DNS, TLS negotiation, or backend server execution?"
+          </h2>
+
+          <div class="text-xs text-slate-400 bg-slate-950/60 p-3 rounded-lg border border-slate-800/80 font-mono">
+            <span class="text-cyan-400 font-bold">Nutun Context:</span> Contact center agents opening remote case histories across nationwide cellular/fiber branches.
+          </div>
+        </div>
+
+        <!-- Terminal Input -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl flex-1 flex flex-col">
+          <div class="flex items-center justify-between mb-3">
+            <label for="interview-input" class="text-xs font-semibold uppercase tracking-wider text-slate-300">
+              Candidate Spoken Answer (Target: 60–90 Seconds)
+            </label>
+            <span id="interview-wordcount" class="text-xs text-slate-500 font-mono">0 words</span>
+          </div>
+
+          <div class="relative flex-1">
+            <textarea
+              id="interview-input"
+              rows="7"
+              class="w-full h-full bg-slate-950 border border-slate-800 rounded-lg p-4 text-xs md:text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 font-sans leading-relaxed resize-none"
+              placeholder="Explain TTFB breakdown: DNS lookup, TCP connect, TLS handshake, request transit, and backend processing time. Explain how you use Chrome DevTools Network Waterfall (Timing tab) to isolate the bottleneck..."
+            ></textarea>
+          </div>
+
+          <div class="mt-4 flex justify-between items-center gap-3">
+            <button id="interview-reset-clock" class="text-xs px-3 py-2 rounded-lg border border-slate-800 bg-slate-950 text-slate-400 hover:text-slate-200 transition">
+              Restart Clock
+            </button>
+            <button id="interview-submit-btn" class="px-6 py-2.5 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 text-black font-bold text-xs tracking-wide transition shadow-lg shadow-cyan-500/20">
+              Submit to Technical Evaluator
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Senior AI Evaluator Feedback -->
+      <div class="flex flex-col gap-5">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-xl flex flex-col">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+              Evaluator Rubric
+            </h3>
+            <span id="interview-eval-status" class="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-400">
+              Awaiting Answer
+            </span>
+          </div>
+
+          <div id="interview-eval-placeholder" class="py-12 text-center text-slate-500 text-xs leading-relaxed">
+            Submit your answer to receive a 6-dimension evaluation breakdown, precision fixes, and the senior follow-up trap.
+          </div>
+
+          <div id="interview-eval-results" class="hidden flex flex-col gap-4">
+            <div class="flex items-center justify-between p-3 rounded-lg bg-slate-950 border border-slate-800">
+              <div>
+                <div class="text-[11px] text-slate-400">Score Earned</div>
+                <div id="interview-score" class="text-2xl font-black text-cyan-400">90 <span class="text-xs text-slate-500 font-normal">/ 100 XP</span></div>
+              </div>
+              <div id="interview-badge" class="px-3 py-1 rounded text-xs font-bold bg-green-950 text-green-400 border border-green-800">
+                🟢 STRONG
+              </div>
+            </div>
+
+            <!-- Rubric Bars -->
+            <div class="space-y-2 text-xs">
+              <div>
+                <div class="flex justify-between text-slate-400 mb-1">
+                  <span>Accuracy & Mechanism:</span>
+                  <span id="rubric-int-acc" class="font-mono text-slate-200">23 / 25</span>
+                </div>
+                <div class="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden">
+                  <div id="bar-int-acc" class="bg-cyan-500 h-full rounded-full" style="width: 92%"></div>
+                </div>
+              </div>
+              <div>
+                <div class="flex justify-between text-slate-400 mb-1">
+                  <span>Diagnostic Tooling (DevTools):</span>
+                  <span id="rubric-int-diag" class="font-mono text-slate-200">19 / 20</span>
+                </div>
+                <div class="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden">
+                  <div id="bar-int-diag" class="bg-blue-500 h-full rounded-full" style="width: 95%"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Precision Note -->
+            <div class="p-3.5 rounded-lg bg-amber-950/40 border border-amber-800 text-xs">
+              <div class="font-bold text-amber-300 mb-1">⚠️ Precision Note</div>
+              <p id="interview-correction" class="text-amber-100/90 leading-relaxed">...</p>
+            </div>
+
+            <!-- Hostile Follow-Up -->
+            <div class="p-3.5 rounded-lg bg-red-950/30 border border-red-800 text-xs">
+              <div class="font-bold text-red-300 mb-1">👹 Senior Follow-Up Trap</div>
+              <p id="interview-followup" class="text-red-100/90 italic leading-relaxed">...</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Exit Test Status Summary -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-xl text-xs">
+          <h4 class="font-bold uppercase tracking-wider text-slate-400 mb-2">Module 01 Exit Status</h4>
+          <p class="text-slate-400 leading-relaxed mb-3">
+            To achieve <strong>🛡️ INTERVIEW READY</strong>, you must score 70+ on the Timed Interview Defense without looking at the lesson notes.
+          </p>
+          <div id="exit-card-status" class="p-2.5 rounded bg-slate-950 border border-slate-800 text-center font-bold text-amber-400 font-mono">
+            🟡 IN PROGRESS
+          </div>
+        </div>
+      </div>
+    </section>
 
   </main>
 
   <script>
-    // --- Vertical Slice Data Model (Requirement #1: High-Performance React) ---
-    const QUESTIONS = [
-      {
-        id: "req1-q1",
-        title: "What are the exact conditions that cause a React component to re-render? Does changing props independently trigger a re-render?",
-        context: "10k agents on high-density contact center CRM dashboards. Telephony webhooks and AI token streams fire into parent trees.",
-        hint: "Props do not trigger renders in isolation; a parent component must re-render first, which then passes new values to children.",
-        timeLimit: 60,
-        evaluator: (text) => {
-          const lower = text.toLowerCase();
-          let score = 0;
-          let feedback = [];
-          let hasPropsMyth = lower.includes("props changing independently") || (lower.includes("props change") && !lower.includes("parent"));
-          
-          if (lower.includes("state") || lower.includes("setstate")) score += 25;
-          if (lower.includes("parent")) score += 25;
-          if (lower.includes("context")) score += 20;
-          if (lower.includes("hook")) score += 10;
-          if (lower.includes("object.is") || lower.includes("bailout") || lower.includes("reference")) score += 10;
-
-          let correction = "";
-          if (hasPropsMyth || !lower.includes("parent")) {
-            correction = "Be careful! Props do not independently trigger a component re-render. A parent component re-renders, producing a new React element with updated props. The child component is evaluated as part of that parent render pass unless an optimization boundary (like React.memo) bails out.";
-          } else {
-            correction = "Excellent distinction! You clearly separated a component scheduling a render via internal state from receiving updated props via a parent re-render.";
-          }
-
-          let followUp = "If a parent component re-renders, but passes the exact same primitive numbers and strings to its unmemoized child, does that child still re-render?";
-
-          return {
-            score: Math.min(100, Math.max(30, score)),
-            accuracy: Math.min(25, Math.floor(score * 0.25)),
-            terminology: Math.min(20, Math.floor(score * 0.20)),
-            tradeoffs: Math.min(20, Math.floor(score * 0.20)),
-            correction,
-            followUp,
-            passed: score >= 60
-          };
-        }
-      },
-      {
-        id: "req1-q2",
-        title: "Describe a concrete scenario where wrapping a component in React.memo provides ZERO performance benefit and actually wastes CPU cycles.",
-        context: "Debtor account action buttons ('Settle Balance', 'Propose Arrangement') rendered across 200 list rows.",
-        hint: "Inline object literals or unmemoized callback props break referential equality (shallowEqual returns false on every render).",
-        timeLimit: 60,
-        evaluator: (text) => {
-          const lower = text.toLowerCase();
-          let score = 0;
-
-          if (lower.includes("inline") || lower.includes("reference") || lower.includes("shallow")) score += 30;
-          if (lower.includes("object") || lower.includes("style") || lower.includes("arrow function") || lower.includes("onclick")) score += 30;
-          if (lower.includes("shallowequal") || lower.includes("equality check") || lower.includes("comparison")) score += 20;
-          if (lower.includes("waste") || lower.includes("overhead") || lower.includes("cost")) score += 20;
-
-          let correction = "Precision Rule: React.memo runs a shallow comparison (Object.is) on every prop. If the parent passes an inline object like style={{ padding: 8 }} or an unmemoized arrow function, shallowEqual is always false. You pay the CPU cost of the equality comparison AND still perform the full render!";
-          let followUp = "How do you preserve referential equality for functions passed to React.memo children without creating stale closures?";
-
-          return {
-            score: Math.min(100, Math.max(30, score)),
-            accuracy: Math.min(25, Math.floor(score * 0.25)),
-            terminology: Math.min(20, Math.floor(score * 0.20)),
-            tradeoffs: Math.min(20, Math.floor(score * 0.20)),
-            correction,
-            followUp,
-            passed: score >= 60
-          };
-        }
-      },
-      {
-        id: "req1-q3",
-        title: "An agent dashboard freezes and drops frames when scrolling through 5,000 debtor records. Why does React.memo fail to solve this, and why does DOM Virtualization succeed?",
-        context: "Large financial collection table with 5,000 accounts, status badges, and debt balance inputs.",
-        hint: "The bottleneck is not React diffing; it's host DOM node bloat in the browser layout/paint pipeline. Virtualization keeps visible DOM nodes constant.",
-        timeLimit: 75,
-        evaluator: (text) => {
-          const lower = text.toLowerCase();
-          let score = 0;
-
-          if (lower.includes("dom") || lower.includes("browser") || lower.includes("layout") || lower.includes("paint") || lower.includes("node")) score += 35;
-          if (lower.includes("virtual") || lower.includes("window") || lower.includes("viewport") || lower.includes("slice")) score += 35;
-          if (lower.includes("memo") && (lower.includes("still exist") || lower.includes("cannot remove") || lower.includes("not diffing"))) score += 20;
-          if (lower.includes("o(1)") || lower.includes("constant") || lower.includes("offset")) score += 10;
-
-          let correction = "Never confuse React diffing with browser rendering! 5,000 rows create 50,000+ real DOM elements. The browser layout and paint engine struggles with geometric recalculation on scroll. React.memo leaves all 50,000 nodes in the browser DOM. Virtualization keeps the DOM node count constant (e.g. 25 visible rows).";
-          let followUp = "Does DOM virtualization reduce the total client memory consumption of the 5,000-record dataset to O(1)?";
-
-          return {
-            score: Math.min(100, Math.max(30, score)),
-            accuracy: Math.min(25, Math.floor(score * 0.25)),
-            terminology: Math.min(20, Math.floor(score * 0.20)),
-            tradeoffs: Math.min(20, Math.floor(score * 0.20)),
-            correction,
-            followUp,
-            passed: score >= 60
-          };
-        }
-      },
-      {
-        id: "req1-q4",
-        title: "How can you optimize a heavy component subtree using Component Composition (children) instead of wrapping everything in useMemo or React.memo?",
-        context: "Agent Telephony Call Timer updating every second inside a heavy Customer Account Overview container.",
-        hint: "Passing children down preserves the React Element object reference from the outer scope, allowing React to skip re-evaluating the subtree.",
-        timeLimit: 60,
-        evaluator: (text) => {
-          const lower = text.toLowerCase();
-          let score = 0;
-
-          if (lower.includes("children") || lower.includes("composition")) score += 35;
-          if (lower.includes("reference") || lower.includes("outer") || lower.includes("grandparent") || lower.includes("created outside")) score += 35;
-          if (lower.includes("skip") || lower.includes("bail") || lower.includes("does not re-render")) score += 20;
-          if (lower.includes("element") || lower.includes("object")) score += 10;
-
-          let correction = "Mechanically, when children is instantiated in the parent scope, its React Element object reference remains identical across state updates inside the wrapper. React compares the element reference, sees it has not changed, and skips re-rendering the entire children subtree without any memoization boilerplate!";
-          let followUp = "When does the children composition optimization break? (Hint: what if the parent passes a new prop directly to children?)";
-
-          return {
-            score: Math.min(100, Math.max(30, score)),
-            accuracy: Math.min(25, Math.floor(score * 0.25)),
-            terminology: Math.min(20, Math.floor(score * 0.20)),
-            tradeoffs: Math.min(20, Math.floor(score * 0.20)),
-            correction,
-            followUp,
-            passed: score >= 60
-          };
-        }
-      }
-    ];
-
-    // --- State Management ---
-    let currentIndex = 0;
-    let timerSeconds = 60;
+    // --- State & Navigation Logic ---
+    let currentStage = "learn";
+    let globalXP = 0;
     let timerInterval = null;
-    let totalScore = 0;
-    let passedQuestions = new Set();
+    let timerSeconds = 60;
 
-    // DOM Elements
-    const qIndexBadge = document.getElementById("question-index-badge");
-    const qTitle = document.getElementById("question-title");
-    const qContext = document.getElementById("question-context");
-    const timerDisplay = document.getElementById("timer-display");
-    const timerBox = document.getElementById("timer-box");
-    const answerInput = document.getElementById("answer-input");
-    const charCount = document.getElementById("char-count");
-    const hintBtn = document.getElementById("hint-btn");
-    const hintPanel = document.getElementById("hint-panel");
-    const hintText = document.getElementById("hint-text");
-    const resetTimerBtn = document.getElementById("reset-timer-btn");
-    const submitBtn = document.getElementById("submit-btn");
+    const tabLearn = document.getElementById("tab-learn");
+    const tabCheckpoint = document.getElementById("tab-checkpoint");
+    const tabInterview = document.getElementById("tab-interview");
 
-    const evalPlaceholder = document.getElementById("evaluation-placeholder");
-    const evalResults = document.getElementById("evaluation-results");
-    const evalScore = document.getElementById("eval-score");
-    const evalGradeBadge = document.getElementById("eval-grade-badge");
-    const evalStatusPill = document.getElementById("evaluation-status-pill");
-    const rubricAccuracy = document.getElementById("rubric-accuracy");
-    const rubricTerminology = document.getElementById("rubric-terminology");
-    const rubricTradeoffs = document.getElementById("rubric-tradeoffs");
-    const barAccuracy = document.getElementById("bar-accuracy");
-    const barTerminology = document.getElementById("bar-terminology");
-    const barTradeoffs = document.getElementById("bar-tradeoffs");
-    const evalCorrectionText = document.getElementById("eval-correction-text");
-    const evalFollowupText = document.getElementById("eval-followup-text");
-    const retryBtn = document.getElementById("retry-btn");
-    const nextBtn = document.getElementById("next-btn");
-    const totalScoreDisplay = document.getElementById("total-score");
-    const exitBadge = document.getElementById("exit-badge");
+    const viewLearn = document.getElementById("view-learn");
+    const viewCheckpoint = document.getElementById("view-checkpoint");
+    const viewInterview = document.getElementById("view-interview");
 
-    function loadQuestion(index) {
-      clearInterval(timerInterval);
-      const q = QUESTIONS[index];
-      
-      qIndexBadge.textContent = `Question ${index + 1} of ${QUESTIONS.length}`;
-      qTitle.textContent = q.title;
-      qContext.textContent = q.context;
-      hintText.textContent = q.hint;
-      hintPanel.classList.add("hidden");
+    const globalXpDisplay = document.getElementById("global-xp");
+    const globalStatusDisplay = document.getElementById("global-status");
 
-      answerInput.value = "";
-      charCount.textContent = "0 words";
-      answerInput.disabled = false;
-      submitBtn.disabled = false;
+    function setStage(stage) {
+      currentStage = stage;
+      [viewLearn, viewCheckpoint, viewInterview].forEach(el => el.classList.add("hidden"));
+      [tabLearn, tabCheckpoint, tabInterview].forEach(btn => {
+        btn.className = "px-4 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 transition";
+      });
 
-      evalResults.classList.add("hidden");
-      evalPlaceholder.classList.remove("hidden");
-      evalStatusPill.textContent = "Ready for Input";
-      evalStatusPill.className = "text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-400";
-
-      timerSeconds = q.timeLimit;
-      updateTimerDisplay();
-      startTimer();
-    }
-
-    function updateTimerDisplay() {
-      timerDisplay.textContent = `${timerSeconds}s`;
-      if (timerSeconds <= 15) {
-        timerBox.classList.add("border-red-600", "urgent-timer");
-        timerDisplay.classList.add("text-red-400");
-        timerDisplay.classList.remove("text-cyan-400");
-      } else {
-        timerBox.classList.remove("border-red-600", "urgent-timer");
-        timerDisplay.classList.remove("text-red-400");
-        timerDisplay.classList.add("text-cyan-400");
+      if (stage === "learn") {
+        viewLearn.classList.remove("hidden");
+        tabLearn.className = "px-4 py-1.5 rounded-lg bg-cyan-600 text-black font-bold transition";
+      } else if (stage === "checkpoint") {
+        viewCheckpoint.classList.remove("hidden");
+        tabCheckpoint.className = "px-4 py-1.5 rounded-lg bg-cyan-600 text-black font-bold transition";
+      } else if (stage === "interview") {
+        viewInterview.classList.remove("hidden");
+        tabInterview.className = "px-4 py-1.5 rounded-lg bg-cyan-600 text-black font-bold transition";
+        startInterviewTimer();
       }
     }
 
-    function startTimer() {
+    tabLearn.addEventListener("click", () => setStage("learn"));
+    tabCheckpoint.addEventListener("click", () => setStage("checkpoint"));
+    tabInterview.addEventListener("click", () => setStage("interview"));
+    document.getElementById("btn-goto-checkpoint").addEventListener("click", () => setStage("checkpoint"));
+    document.getElementById("btn-goto-interview").addEventListener("click", () => setStage("interview"));
+
+    // --- Checkpoint AI Tutor Evaluation ---
+    const checkpointInput = document.getElementById("checkpoint-input");
+    const checkpointWordcount = document.getElementById("checkpoint-wordcount");
+    const btnCheckpointSubmit = document.getElementById("btn-checkpoint-submit");
+    const checkpointFeedback = document.getElementById("checkpoint-feedback");
+    const checkpointStatusPill = document.getElementById("checkpoint-status-pill");
+    const checkpointCorrectionText = document.getElementById("checkpoint-correction-text");
+    const checkpointChallengeText = document.getElementById("checkpoint-challenge-text");
+
+    checkpointInput.addEventListener("input", () => {
+      const words = checkpointInput.value.trim().split(/\s+/).filter(Boolean).length;
+      checkpointWordcount.textContent = `${words} words`;
+    });
+
+    btnCheckpointSubmit.addEventListener("click", () => {
+      const text = checkpointInput.value.trim().toLowerCase();
+      if (!text) {
+        alert("Please write your explanation first.");
+        return;
+      }
+
+      let score = 0;
+      if (text.includes("dns")) score += 25;
+      if (text.includes("tcp") || text.includes("handshake")) score += 25;
+      if (text.includes("tls") || text.includes("ssl") || text.includes("security")) score += 20;
+      if (text.includes("ip") || text.includes("address")) score += 15;
+      if (text.includes("http") || text.includes("get")) score += 15;
+
+      checkpointFeedback.classList.remove("hidden");
+      if (score >= 60) {
+        checkpointStatusPill.textContent = "Sequence Validated";
+        checkpointStatusPill.className = "px-2 py-0.5 rounded text-[11px] font-bold bg-green-950 text-green-400 border border-green-800";
+        checkpointCorrectionText.innerHTML = "<strong>Precision Assessment:</strong> You correctly identified the prerequisite layers! The browser must first resolve the IP via DNS, execute the TCP 3-way handshake to establish a reliable byte stream, negotiate TLS 1.3 encryption, and only then dispatch the HTTP request packet over the socket.";
+        checkpointChallengeText.textContent = "Why does an established HTTP/2 connection make DNS and TLS handshakes 0ms for subsequent API calls to the same host?";
+        globalXP = Math.max(globalXP, 50);
+      } else {
+        checkpointStatusPill.textContent = "Sequence Needs Refinement";
+        checkpointStatusPill.className = "px-2 py-0.5 rounded text-[11px] font-bold bg-amber-950 text-amber-400 border border-amber-800";
+        checkpointCorrectionText.innerHTML = "<strong>Precision Correction:</strong> Remember the strict layered sequence: <code>Hostname → DNS resolution (IP) → TCP Handshake (3-way) → TLS 1.3 Handshake (crypto) → HTTP Request</code>. DNS does not convert URLs into HTTP requests; it solely discovers the IP address!";
+        checkpointChallengeText.textContent = "Review the sequence: What error does the browser return if DNS succeeds but the server refuses the TCP handshake?";
+      }
+
+      globalXpDisplay.textContent = `${globalXP} / 200 XP`;
+    });
+
+    // --- Timed Interview Defense Evaluation ---
+    const interviewInput = document.getElementById("interview-input");
+    const interviewWordcount = document.getElementById("interview-wordcount");
+    const interviewSubmitBtn = document.getElementById("interview-submit-btn");
+    const interviewResetClock = document.getElementById("interview-reset-clock");
+    const interviewTimerDisplay = document.getElementById("interview-timer-display");
+    const interviewTimerBox = document.getElementById("interview-timer-box");
+
+    const interviewEvalPlaceholder = document.getElementById("interview-eval-placeholder");
+    const interviewEvalResults = document.getElementById("interview-eval-results");
+    const interviewScore = document.getElementById("interview-score");
+    const interviewBadge = document.getElementById("interview-badge");
+    const interviewCorrection = document.getElementById("interview-correction");
+    const interviewFollowup = document.getElementById("interview-followup");
+    const exitCardStatus = document.getElementById("exit-card-status");
+
+    function startInterviewTimer() {
       clearInterval(timerInterval);
+      timerSeconds = 60;
+      updateInterviewTimer();
       timerInterval = setInterval(() => {
         if (timerSeconds > 0) {
           timerSeconds--;
-          updateTimerDisplay();
+          updateInterviewTimer();
         } else {
           clearInterval(timerInterval);
-          timerDisplay.textContent = "TIME EXPIRED";
-          timerBox.classList.add("border-red-600");
+          interviewTimerDisplay.textContent = "EXPIRED";
+          interviewTimerBox.classList.add("border-red-600");
         }
       }, 1000);
     }
 
-    // Word Count Tracker
-    answerInput.addEventListener("input", () => {
-      const words = answerInput.value.trim().split(/\s+/).filter(Boolean).length;
-      charCount.textContent = `${words} words`;
+    function updateInterviewTimer() {
+      interviewTimerDisplay.textContent = `${timerSeconds}s`;
+      if (timerSeconds <= 15) {
+        interviewTimerBox.classList.add("border-red-600", "urgent-timer");
+        interviewTimerDisplay.classList.add("text-red-400");
+      } else {
+        interviewTimerBox.classList.remove("border-red-600", "urgent-timer");
+        interviewTimerDisplay.classList.remove("text-red-400");
+      }
+    }
+
+    interviewResetClock.addEventListener("click", startInterviewTimer);
+
+    interviewInput.addEventListener("input", () => {
+      const words = interviewInput.value.trim().split(/\s+/).filter(Boolean).length;
+      interviewWordcount.textContent = `${words} words`;
     });
 
-    // Mechanism Hint Toggle
-    hintBtn.addEventListener("click", () => {
-      hintPanel.classList.toggle("hidden");
-    });
-
-    // Reset Timer
-    resetTimerBtn.addEventListener("click", () => {
-      timerSeconds = QUESTIONS[currentIndex].timeLimit;
-      updateTimerDisplay();
-      startTimer();
-    });
-
-    // Evaluate Answer
-    submitBtn.addEventListener("click", () => {
-      const text = answerInput.value.trim();
+    interviewSubmitBtn.addEventListener("click", () => {
+      const text = interviewInput.value.trim().toLowerCase();
       if (!text) {
-        alert("Please write your technical answer before submitting to the evaluator.");
+        alert("Please write your interview defense before submitting.");
         return;
       }
 
       clearInterval(timerInterval);
-      evalStatusPill.textContent = "Graded";
-      evalStatusPill.className = "text-xs px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800";
+      let score = 0;
 
-      const result = QUESTIONS[currentIndex].evaluator(text);
+      if (text.includes("dns")) score += 20;
+      if (text.includes("tcp") || text.includes("handshake")) score += 20;
+      if (text.includes("tls") || text.includes("ssl")) score += 15;
+      if (text.includes("server") || text.includes("database") || text.includes("processing")) score += 25;
+      if (text.includes("devtools") || text.includes("network") || text.includes("waterfall") || text.includes("timing")) score += 20;
 
-      evalScore.innerHTML = `${result.score} <span class="text-xs text-slate-500 font-normal">/ 100 XP</span>`;
-      
-      rubricAccuracy.textContent = `${result.accuracy} / 25`;
-      barAccuracy.style.width = `${(result.accuracy / 25) * 100}%`;
+      interviewEvalPlaceholder.classList.add("hidden");
+      interviewEvalResults.classList.remove("hidden");
 
-      rubricTerminology.textContent = `${result.terminology} / 20`;
-      barTerminology.style.width = `${(result.terminology / 20) * 100}%`;
+      interviewScore.innerHTML = `${Math.min(100, Math.max(35, score))} <span class="text-xs text-slate-500 font-normal">/ 100 XP</span>`;
 
-      rubricTradeoffs.textContent = `${result.tradeoffs} / 20`;
-      barTradeoffs.style.width = `${(result.tradeoffs / 20) * 100}%`;
-
-      evalCorrectionText.textContent = result.correction;
-      evalFollowupText.textContent = `"${result.followUp}"`;
-
-      if (result.passed) {
-        evalGradeBadge.textContent = "🟢 PASS (STRONG DEFENSE)";
-        evalGradeBadge.className = "px-3 py-1 rounded text-xs font-bold bg-green-950 text-green-400 border border-green-800";
-        passedQuestions.add(currentIndex);
-        document.getElementById(`check-${currentIndex + 1}`).classList.add("text-green-400", "font-bold");
+      if (score >= 70) {
+        interviewBadge.textContent = "🟢 PASS (INTERVIEW READY)";
+        interviewBadge.className = "px-3 py-1 rounded text-xs font-bold bg-green-950 text-green-400 border border-green-800";
+        interviewCorrection.textContent = "Outstanding explanation! You clearly explained that TTFB encompasses network latency (DNS, TCP, TLS, and request transit) plus backend processing time. Inspecting the Chrome DevTools Network Waterfall Timing tab isolates whether the bar is stalled on 'Initial connection', 'SSL', or 'Waiting for server response'.";
+        interviewFollowup.textContent = "If TTFB is 2,500ms, but backend APM reveals the database query and controller took only 12ms total, what infrastructure layers between the browser and backend server would you investigate first?";
+        globalXP = 150;
+        globalStatusDisplay.textContent = "🛡️ INTERVIEW READY";
+        globalStatusDisplay.className = "font-bold text-green-400 ml-1";
+        exitCardStatus.textContent = "🛡️ INTERVIEW READY (PASSED)";
+        exitCardStatus.className = "p-2.5 rounded bg-green-950/60 border border-green-800 text-center font-bold text-green-400 font-mono";
       } else {
-        evalGradeBadge.textContent = "🟡 REVISE PRECISION";
-        evalGradeBadge.className = "px-3 py-1 rounded text-xs font-bold bg-amber-950 text-amber-400 border border-amber-800";
+        interviewBadge.textContent = "🟡 REVISE PRECISION";
+        interviewBadge.className = "px-3 py-1 rounded text-xs font-bold bg-amber-950 text-amber-400 border border-amber-800";
+        interviewCorrection.textContent = "Precision Rule: TTFB is Time to First Byte. It measures the duration from when the browser dispatches the request until the first byte of response data arrives. In DevTools, the Timing tab separates 'Waiting for server response' (backend time) from connection setup and DNS time.";
+        interviewFollowup.textContent = "Can high TTFB be caused purely by geographic distance between the client and origin server, even if the database query is instant?";
+        globalXP = Math.max(globalXP, 75);
       }
 
-      totalScore += result.score;
-      totalScoreDisplay.textContent = `${totalScore} / 400 XP`;
-
-      if (passedQuestions.size === QUESTIONS.length) {
-        exitBadge.textContent = "🛡️ INTERVIEW READY";
-        exitBadge.className = "font-bold text-green-400 ml-1";
-      }
-
-      evalPlaceholder.classList.add("hidden");
-      evalResults.classList.remove("hidden");
+      globalXpDisplay.textContent = `${globalXP} / 200 XP`;
     });
-
-    // Retry Button
-    retryBtn.addEventListener("click", () => {
-      evalResults.classList.add("hidden");
-      evalPlaceholder.classList.remove("hidden");
-      evalStatusPill.textContent = "Retrying";
-      evalStatusPill.className = "text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-400";
-      answerInput.focus();
-      startTimer();
-    });
-
-    // Next Question Button
-    nextBtn.addEventListener("click", () => {
-      if (currentIndex < QUESTIONS.length - 1) {
-        currentIndex++;
-        loadQuestion(currentIndex);
-      } else {
-        alert(`Arena Complete! Total XP: ${totalScore}/400. Check the Exit Test status.`);
-      }
-    });
-
-    // Initialize
-    loadQuestion(0);
   </script>
 </body>
 </html>
